@@ -208,12 +208,7 @@ body[data-transitioning] .loading:after {
 }
 
 /* For tablet+ Device */
-@media (min-width: 768px) and (orientation: landscape) {
-  .apps ol > li {
-    width: 20%; /* five a line */
-  }
-
-  /* Option to delete apps */
+@media (min-width: 768px) {
   .apps ol > li span.options {
     height: 4.5rem;
     background: url(../resources/images/delete.png) no-repeat left top / 4.5rem;
@@ -242,4 +237,12 @@ body[data-transitioning] .loading:after {
   .apps ol > li:nth-child(16) {
     display: none;
   }
+}
+
+@media (min-width: 768px) and (orientation: landscape) {
+/* Option to delete apps */
+  .apps ol > li {
+    width: 20%; /* five a line */
+  }
+
 }
