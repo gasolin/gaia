@@ -95,6 +95,7 @@
     <link rel="import" href="/elements/bluetooth.html">
     <link rel="import" href="/elements/hotspot_wifi_settings.html">
     <link rel="import" href="/elements/hotspot.html">
+    <link rel="import" href="/elements/slideshow.html">
     <link rel="import" href="/elements/sound.html">
     <link rel="import" href="/elements/display.html">
     <link rel="import" href="/elements/notifications.html">
@@ -224,6 +225,8 @@
     <!-- Connectivity :: Internet Sharing -->
     <section is="hotspot" role="region" id="hotspot" data-require-sub-panels="true"></section>
 
+    <!-- Personalization :: SlideShow -->
+    <section is="slideshow" role="region" id="slideshow"></section>
     <!-- Personalization :: Sound :: Sound Selection -->
     <section is="sound-selection" role="region" id="sound-selection"></section>
     <!-- Personalization :: Sound -->
@@ -356,6 +359,9 @@
           <h2 data-l10n-id="personalization">Personalization</h2>
         </header>
         <ul>
+          <li>
+            <a id="menuItem-slideshow" class="menu-item" href="#slideshow" data-l10n-id="slideshow">Photo Frame</a>
+          </li>
           <li>
             <a id="menuItem-sound" class="menu-item" href="#sound" data-l10n-id="sound">Sound</a>
           </li>

@@ -1,0 +1,64 @@
+<element name="slideshow" extends="section">
+  <template>
+
+    <header>
+      <a href="#root"><span class="icon icon-back">back</span></a>
+      <h1 data-l10n-id="photoframe"> Photo Frame </h1>
+    </header>
+
+    <div>
+      <ul>
+        <li id="slideshow-enabled">
+          <label class="pack-switch">
+            <input type="checkbox" data-ignore/>
+            <span></span>
+          </label>
+          <a data-l10n-id="slideshow">Photo Frame</a>
+        </li>
+        <li hidden id="slideshow-source">
+          <p data-l10n-id="slideshow-source">Image source</p>
+          <span class="button icon icon-dialog">
+            <select name="slideshow.source">
+              <option value="wallpaper" data-l10n-id="wallpaper">Wallpaper</option>
+              <option value="gallery" data-l10n-id="gallery" selected>Gallery</option>
+            </select>
+          </span>
+        </li>
+        <li hidden id="slideshow-duration">
+          <p data-l10n-id="slideshow-duration">Interval Time</p>
+          <span class="button icon icon-dialog">
+            <select name="photoFrame.duration" data-value-type="integer">
+              <option value="2" data-l10n-id="three-seconds" selected>3 seconds</option>
+              <option value="5" data-l10n-id="five-seconds"> 5 seconds</option>
+              <option value="10" data-l10n-id="eight-seconds"> 8 seconds</option>
+              <option value="20" data-l10n-id="ten-seconds">10 seconds</option>
+            </select>
+          </span>
+        </li>
+        <li hidden id="slideshow-effect">
+          <p data-l10n-id="slideshow-effect">Effect</p>
+          <span class="button icon icon-dialog">
+            <select name="photoFrame.effect" data-value-type="integer">
+              <option value="0" data-l10n-id="random" selected>Random</option>
+            </select>
+          </span>
+        </li>
+        <li hidden id="slideshow-activation">
+          <p data-l10n-id="slideshow-activation">Effect</p>
+          <span class="button icon icon-dialog">
+            <select name="photoFrame.activation" data-value-type="integer">
+              <option value="60" data-l10n-id="one-minute"> 1 minute</option>
+              <option value="180" data-l10n-id="three-minutes" selected> 3 minutes</option>
+              <option value="300" data-l10n-id="five-minutes">5 minutes</option>
+              <option value="600" data-l10n-id="ten-minutes">10 minutes</option>
+              <option value="1200" data-l10n-id="twenty-minutes">20 minutes</option>
+            </select>
+          </span>
+        </li>
+    </div>
+
+    <script type="application/javascript" src="shared/js/manifest_helper.js"></script>
+    <script src="js/slideshow.js"></script>
+
+  </template>
+</element>

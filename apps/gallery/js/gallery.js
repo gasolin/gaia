@@ -172,6 +172,7 @@ function init() {
   navigator.mozSetMessageHandler('activity', function activityHandler(a) {
     var activityName = a.source.name;
     switch (activityName) {
+    case 'slideshow':
     case 'browse':
       // The 'browse' activity is the way we launch Gallery from Camera.
       // If this was a cold start, then the db needs to be initialized.

@@ -38,6 +38,14 @@
       "disposition": "inline",
       "returnValue": true,
       "href": "/open.html"
+    },
+    "slideshow": {
+      "filters": {
+        "type": "photos"
+      },
+      "disposition": "inline",
+      "returnValue": true,
+      "href": "/index.html#pick"
     }
   },
   "locales": {
