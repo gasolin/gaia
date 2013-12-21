@@ -3,8 +3,9 @@
 define('panels/DisplayPanel',
   ['modules/Panel', 'modules/Wallpaper', 'modules/Utils'],
   function(Panel, Wallpaper, Utils) {
-    var _ready = function(rootElement, options) {
-      this.__proto__.ready();
+    var _initialized = false;
+    var _init = function dp_init(rootElement, options) {
+      _initialized = true;
 
       var panel = rootElement;
       var settings = navigator.mozSettings;
@@ -37,9 +38,17 @@ define('panels/DisplayPanel',
             settings.createLock().set(cset);
           }
       });
+
+      Wallpaper.init();
     };
 
-    Wallpaper.init();
+    var _ready = function dp_ready(rootElement, options) {
+      this.__proto__.ready(rootElement, options);
+
+      if (!_initialized) {
+        _init(rootElement, options);
+      }
+    };
 
     var panel = {
       ready: _ready

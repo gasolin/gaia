@@ -1,8 +1,8 @@
 define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
-  function (SettingsService, SettingsCache) {
+  function(SettingsService, SettingsCache) {
     var _settings = navigator.mozSettings;
 
-    var _activate = function(panel) {
+    var _activate = function panel_activate(panel) {
       navigator.mozL10n.translate(panel);
 
       // activate all scripts
@@ -25,26 +25,26 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
         if (!link.dataset.href.startsWith('#')) { // external link
           link.onclick = function() {
             //openLink(this.dataset.href);
-            console.error("not implemented");
+            console.error('not implemented');
             return false;
           };
         } else if (!link.dataset.href.endsWith('Settings')) { // generic dialog
           link.onclick = function() {
             //openDialog(this.dataset.href.substr(1));
-            console.error("not implemented");
+            console.error('not implemented');
             return false;
           };
         } else { // Settings-specific dialog box
           link.onclick = function() {
             //self.openDialog(this.dataset.href.substr(1));
-            console.error("not implemented");
+            console.error('not implemented');
             return false;
           };
         }
       }
     };
 
-    var _preset = function(panel) {
+    var _preset = function panel_preset(panel) {
       SettingsCache.getSettings(function(result) {
         panel = panel || document;
 
@@ -133,8 +133,8 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
             }
           } else { // result[key] is undefined
             switch (key) {
-              //XXX bug 816899 will also provide 'deviceinfo.software' from Gecko
-              //  which is {os name + os version}
+              //XXX bug 816899 will also provide 'deviceinfo.software' from
+              // Gecko which is {os name + os version}
               case 'deviceinfo.software':
                 var _ = navigator.mozL10n.get;
                 var text = _('brandShortName') + ' ' +
@@ -158,7 +158,7 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       });
     };
 
-    var _onLinkClick = function(event) {
+    var _onLinkClick = function panel_onLinkClick(event) {
       var target = event.target;
       var href;
 
@@ -184,7 +184,7 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       event.preventDefault();
     };
 
-    var _onSettingChange = function(panel, event) {
+    var _onSettingsChange = function panel_onSettingsChange(panel, event) {
       var key = event.settingName;
       var value = event.settingValue;
 
@@ -236,7 +236,7 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       }
     };
 
-    var _onInputChange = function(event) {
+    var _onInputChange = function panel_onInputChange(event) {
       var input = event.target;
       var type = input.type;
       var key = input.name;
@@ -279,19 +279,30 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       _settings.createLock().set(cset);
     };
 
-    var _addListeners = function(panel) {
+    var _addListeners = function panel_addListeners(panel) {
       SettingsCache.addEventListener('settingsChange',
-        _onSettingChange.bind(null, panel));
+        _onSettingsChange.bind(null, panel));
       panel.addEventListener('change', _onInputChange);
       panel.addEventListener('click', _onLinkClick);
     };
 
     var exports = function() {
+      var _initialized = false;
+      var _panel = null;
+
       return {
-        ready: function(panel, options) {
+        init: function(panel, options) {
+          _initialized = true;
+          _panel = panel;
+
           _activate(panel);
           _preset(panel);
           _addListeners(panel);
+        },
+        ready: function(panel, options) {
+          if (!_initialized) {
+            this.init(panel, options);
+          }
         }
       };
     };

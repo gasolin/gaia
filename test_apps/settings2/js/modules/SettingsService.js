@@ -1,6 +1,7 @@
-define('modules/SettingsService', ['modules/PageTransitions'],
+define('modules/SettingsService',
+  ['modules/PageTransitions', 'shared/js/lazy_loader'],
   function (PageTransitions) {
-    var _currentHash = null;
+    var _currentHash = 'default';
     var _history = [];
 
     var _navigate = function ss_navigate(panelId, options) {
@@ -11,6 +12,7 @@ define('modules/SettingsService', ['modules/PageTransitions'],
           panelElement.querySelectorAll('module'), function(module) {
             return module.dataset.path;
         });
+
         require(requiredModulePaths, function(panel) {
           if (!panel) {
             _currentHash = panelId;
@@ -22,9 +24,9 @@ define('modules/SettingsService', ['modules/PageTransitions'],
 
           var oldPanelElement =
             _currentHash ? document.getElementById(_currentHash) : null;
-          PageTransitions.oneColumn(oldPanelElement, panelElement, function() {
-            panel.ready(panelElement, options);
-          });
+
+          panel.ready(panelElement, options);
+          PageTransitions.oneColumn(oldPanelElement, panelElement);
           _currentHash = panelId;
         });
       });

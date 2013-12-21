@@ -3,9 +3,8 @@
 define('panels/SoundPanel',
   ['modules/Panel', 'modules/Utils', 'shared/js/settings_listener'],
   function (Panel, Utils) {
-    var _ready = function(rootElement, options) {
-      this.__proto__.ready(rootElement, options);
-
+    var _initialized = false;
+    var _init = function sp_init(rootElement, options) {
       var _ = navigator.mozL10n.get;
 
       // Show the touch tone selector if and only if we're on a CDMA network
@@ -141,6 +140,14 @@ define('panels/SoundPanel',
           });
         };
       });
+    };
+
+    var _ready = function sp_ready(rootElement, options) {
+      this.__proto__.ready(rootElement, options);
+
+      if (!_initialized) {
+        _init(rootElement, options);
+      }
     };
 
     var panel = {

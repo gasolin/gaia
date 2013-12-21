@@ -114,7 +114,7 @@ var Settings = {
     }
 
     // register web activity handler
-    navigator.mozSetMessageHandler('activity', this.webActivityHandler);
+    //navigator.mozSetMessageHandler('activity', this.webActivityHandler);
 
     // preset all inputs that have a `name' attribute
     this.presetPanel();
@@ -160,48 +160,6 @@ var Settings = {
     if (document.hidden) {
       Settings.finishActivityRequest();
       document.removeEventListener('visibilitychange',
-        Settings.visibilityHandler);
-    }
-  },
-
-  webActivityHandler: function settings_handleActivity(activityRequest) {
-    var name = activityRequest.source.name;
-    var section = 'root';
-    Settings._currentActivity = activityRequest;
-    switch (name) {
-      case 'configure':
-        section = activityRequest.source.data.section;
-
-        if (!section) {
-          // If there isn't a section specified,
-          // simply show ourselve without making ourselves a dialog.
-          Settings._currentActivity = null;
-        }
-
-        // Validate if the section exists
-        var sectionElement = document.getElementById(section);
-        if (!sectionElement || sectionElement.tagName !== 'SECTION') {
-          var msg = 'Trying to open an non-existent section: ' + section;
-          console.warn(msg);
-          activityRequest.postError(msg);
-          return;
-        }
-
-        // Go to that section
-        setTimeout(function settings_goToSection() {
-          Settings.currentPanel = section;
-        });
-        break;
-      default:
-        Settings._currentActivity = null;
-        break;
-    }
-
-    // Mark the desired panel as a dialog
-    if (Settings._currentActivity !== null) {
-      var domSection = document.getElementById(section);
-      domSection.dataset.dialog = true;
-      document.addEventListener('visibilitychange',
         Settings.visibilityHandler);
     }
   },
