@@ -49,19 +49,19 @@
       "description": "Gaia الضبط"
     },
     "en-US": {
-      "name": "Settings",
+      "name": "Settings2",
       "description": "Gaia Settings"
     },
     "fr": {
-      "name": "Paramètres",
+      "name": "Paramètres2",
       "description": "Paramètres Gaia"
     },
     "tr": {
-      "name": "Ayarlar",
+      "name": "Ayarlar2",
       "description": "Gaia Ayarları"
     },
     "zh-TW": {
-      "name": "設定",
+      "name": "設定2",
       "description": "Gaia 設定"
     }
   },
