@@ -1,3 +1,9 @@
+require({
+  paths: {
+    'shared': '../shared'
+  }
+});
+
 require([
   'modules/SettingsService'
 ], function (SettingsService) {
