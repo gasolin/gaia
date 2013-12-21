@@ -1,3 +1,5 @@
+'use strict';
+
 define('panels/DisplayPanel',
   ['modules/Panel', 'modules/Wallpaper', 'modules/Utils'],
   function(Panel, Wallpaper, Utils) {

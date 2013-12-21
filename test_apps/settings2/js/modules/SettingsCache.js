@@ -1,11 +1,28 @@
+'use strict';
+
 define(function() {
   var _settings = window.navigator.mozSettings;
+
+  // Cache of all current settings values.  There's some large stuff
+  // in here, but not much useful can be done with the settings app
+  // without these, so we keep this around most of the time.
   var _settingsCache = null;
+
+  // True when a request has already been made to fill the settings
+  // cache.  When this is true, no further get("*") requests should be
+  // made; instead, pending callbacks should be added to
+  // _pendingSettingsCallbacks.
   var _settingsCacheRequestSent = null;
+
+  // There can be race conditions in which we need settings values,
+  // but haven't filled the cache yet.  This array tracks those
+  // listeners.
   var _pendingSettingsCallbacks = [];
 
   var _callbacks = [];
  
+  // Invoke |callback| with a request object for a successful fetch of
+  // settings values, when those values are ready.
   var _getSettings = function sc_getSettings(callback) {
     if (!_settings)
       return;
