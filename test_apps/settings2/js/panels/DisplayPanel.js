@@ -3,7 +3,9 @@
 define('panels/DisplayPanel',
   ['modules/Panel', 'modules/Wallpaper', 'modules/Utils'],
   function(Panel, Wallpaper, Utils) {
-    var ready = function(rootElement, options) {
+    var _ready = function(rootElement, options) {
+      this.__proto__.ready();
+
       var panel = rootElement;
       var settings = navigator.mozSettings;
       if (!settings || !panel)
@@ -39,5 +41,10 @@ define('panels/DisplayPanel',
 
     Wallpaper.init();
 
-    return Panel(ready);
+    var panel = {
+      ready: _ready
+    };
+    panel.__proto__ = Panel();
+
+    return panel;
 });

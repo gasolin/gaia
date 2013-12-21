@@ -286,16 +286,12 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       panel.addEventListener('click', _onLinkClick);
     };
 
-    var exports = function(readyFunc) {
+    var exports = function() {
       return {
         ready: function(panel, options) {
           _activate(panel);
           _preset(panel);
           _addListeners(panel);
-
-          if (readyFunc) {
-            readyFunc(panel, options);
-          }
         }
       };
     };
