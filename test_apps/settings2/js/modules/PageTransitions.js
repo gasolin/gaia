@@ -42,7 +42,9 @@ define(function() {
       });
     },
     twoColumn: function two_column(oldPanel, newPanel, callback) {
-      oldPanel.className = newPanel.className ? '' : 'previous';
+      if (oldPanel) {
+        oldPanel.className = newPanel.className ? '' : 'previous';
+      }
       newPanel.className = 'current';
 
       if (callback) {

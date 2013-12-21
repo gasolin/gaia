@@ -1,5 +1,7 @@
 require([
   'modules/SettingsService'
 ], function (SettingsService) {
-  SettingsService.navigate('root');
+  navigator.mozL10n.ready(function() {
+    SettingsService.navigate('root');
+  });
 });
