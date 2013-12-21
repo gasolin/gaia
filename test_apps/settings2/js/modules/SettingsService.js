@@ -16,7 +16,6 @@ define('modules/SettingsService', ['modules/PageTransitions'],
             _currentHash = panelId;
             return;
           }
-
           options = options || {};
           options.modules = Array.prototype.slice.call(arguments, 1);
           options.service = _service;
