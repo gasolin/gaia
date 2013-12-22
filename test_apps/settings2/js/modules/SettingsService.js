@@ -1,40 +1,43 @@
+'use strict';
+
 define('modules/SettingsService',
-  ['modules/PageTransitions', 'shared/js/lazy_loader'],
-  function(PageTransitions) {
-    var _currentHash = null;
+  ['modules/PageTransitions', 'modules/StaticPanelCache',
+   'shared/js/lazy_loader'],
+  function(PageTransitions, StaticPanelCache) {
+    var _currentPanelId = null;
     var _currentPanel = null;
-    var _history = [];
 
     var _navigate = function ss_navigate(panelId, options) {
       _loadPanel(panelId, function() {
         // Get the list of the requiring modules
-        var panelElement = document.getElementById(panelId);
+        var newPanelElement = document.getElementById(panelId);
+        var currentPanelElement =
+            _currentPanelId ? document.getElementById(_currentPanelId) : null;
+
         var requiredModulePaths = Array.prototype.map.call(
-          panelElement.querySelectorAll('module'), function(module) {
+          newPanelElement.querySelectorAll('module'), function(module) {
             return module.dataset.path;
         });
 
         require(requiredModulePaths, function(panel) {
+          // Get the panel object for the static panel.
           if (!panel) {
-            _currentHash = panelId;
-
-            if (_currentPanel) { _currentPanel.done(); }
-            _currentPanel = null;
-            return;
+            panel = StaticPanelCache.get(panelId);
           }
 
+          // Prepare options and calls to the panel object's ready function.
           options = options || {};
           options.modules = Array.prototype.slice.call(arguments, 1);
-          options.service = _service;
+          panel.ready(newPanelElement, options);
 
-          var oldPanelElement =
-            _currentHash ? document.getElementById(_currentHash) : null;
+          // Do transition
+          PageTransitions.oneColumn(currentPanelElement, newPanelElement);
 
-          panel.ready(panelElement, options);
-          PageTransitions.oneColumn(oldPanelElement, panelElement);
-
-          _currentHash = panelId;
-          if (_currentPanel) { _currentPanel.done(); }
+          // Update info
+          _currentPanelId = panelId;
+          if (_currentPanel) {
+            _currentPanel.done();
+          }
           _currentPanel = panel;
         });
       });
@@ -50,12 +53,7 @@ define('modules/SettingsService',
       LazyLoader.load([panel], callback);
     };
 
-    var _service = {
-      navigate: _navigate,
-      get history() {
-        return _history;
-      }
+    return {
+      navigate: _navigate
     };
-
-    return _service;
 });
