@@ -1,4 +1,4 @@
-define('panels/RootPanel', ['modules/Panel', 'modules/Battery'],
+define('panels/BatteryPanel', ['modules/Panel', 'modules/Battery'],
   function (Panel, Battery) {
     var _initialized = false;
     var _init = function(rootElement, options) {
@@ -16,7 +16,7 @@ define('panels/RootPanel', ['modules/Panel', 'modules/Battery'],
     };
 
     var _initBatteryText = function(rootElement) {
-      var _batteryLevelText = rootElement.querySelector('#battery-desc');
+      var _batteryLevelText = rootElement.querySelector('#battery-level *');
       var _refreshText = function() {
         navigator.mozL10n.localize(_batteryLevelText,
                                    'batteryLevel-percent-' + Battery.state,
