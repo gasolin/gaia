@@ -1,21 +1,39 @@
 define('panels/RootPanel', ['modules/Panel', 'modules/Battery'],
   function(Panel, Battery) {
-    var _init = function(rootElement, options) {
-      _initBatteryText(rootElement);
-    };
-
-    var _initBatteryText = function(rootElement) {
-      var _batteryLevelText = rootElement.querySelector('#battery-desc');
-      var _refreshText = function() {
+    var BatteryItem = (function() {
+      var _batteryLevelText = null;
+      var _refreshText = function bi_refreshText() {
         navigator.mozL10n.localize(_batteryLevelText,
                                    'batteryLevel-percent-' + Battery.state,
                                    { level: Battery.level });
       };
 
-      Battery.observe('level', _refreshText);
-      Battery.observe('state', _refreshText);
-      _refreshText();
+      return {
+        init: function bi_init(rootElement) {
+          _batteryLevelText = rootElement.querySelector('#battery-desc');
+        },
+        ready: function bi_ready() {
+          Battery.observe('level', _refreshText);
+          Battery.observe('state', _refreshText);
+          _refreshText();
+        },
+        done: function bi_done() {
+          Battery.unobserve(_refreshText);
+        }
+      };
+    })();
+
+    var _init = function(rootElement, options) {
+      BatteryItem.init(rootElement);
     };
 
-    return Panel(_init);
+    var _ready = function(rootElement, options) {
+      BatteryItem.ready();
+    };
+
+    var _done = function() {
+      BatteryItem.done();
+    };
+
+    return Panel(_init, null, _ready, _done);
 });

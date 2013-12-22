@@ -20,7 +20,7 @@ define(function() {
   var _pendingSettingsCallbacks = [];
 
   var _callbacks = [];
- 
+
   // Invoke |callback| with a request object for a successful fetch of
   // settings values, when those values are ready.
   var _getSettings = function sc_getSettings(callback) {
@@ -59,7 +59,20 @@ define(function() {
   var _addEventListener = function sc_addEventListener(eventName, callback) {
     if (eventName !== 'settingsChange')
       return;
-    _callbacks.push(callback);
+    var index = _callbacks.indexOf(callback);
+    if (index === -1) {
+      _callbacks.push(callback);
+    }
+  };
+
+  var _removeEventListener =
+    function sc_removeEventListsner(eventName, callback) {
+      if (eventName !== 'settingsChange')
+        return;
+      var index = _callbacks.indexOf(callback);
+      if (index !== -1) {
+        _callbacks.splice(index, 1);
+      }
   };
 
   _settings.onsettingchange = function sc_onSettingsChange(event) {
@@ -83,6 +96,7 @@ define(function() {
 
   return {
     getSettings: _getSettings,
-    addEventListener: _addEventListener
-  }
+    addEventListener: _addEventListener,
+    removeEventListener: _removeEventListener
+  };
 });

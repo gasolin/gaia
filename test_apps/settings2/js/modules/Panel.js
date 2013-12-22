@@ -279,62 +279,79 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       _settings.createLock().set(cset);
     };
 
-    var _addListeners = function panel_addListeners(panel) {
-      SettingsCache.addEventListener('settingsChange',
-        _onSettingsChange.bind(null, panel));
-      panel.addEventListener('change', _onInputChange);
-      panel.addEventListener('click', _onLinkClick);
-    };
-
     var _emptyFunc = function panel_emptyFunc() {};
-    var _proceed = function panel_proceed(callback) {
-      if (callback) { callback(); }
-    };
 
-    var exports = function(_init, _uninit, _ready, _done) {
+    var Panel = function(_init, _uninit, _ready, _done) {
       var _initialized = false;
       var _panel = null;
-
-      _init = _init || function(panel, options, callback) {
-        _proceed(callback);
+      var _settingsChangeHandler = function(event) {
+        if (_panel) {
+          _onSettingsChange(event, _panel);
+        }
       };
+
+      var _addListeners = function panel_addListeners(panel) {
+        if (!panel)
+          return;
+
+        SettingsCache.addEventListener('settingsChange',
+          _settingsChangeHandler);
+        panel.addEventListener('change', _onInputChange);
+        panel.addEventListener('click', _onLinkClick);
+      };
+
+      var _removeListeners = function panel_removeListeners(panel) {
+        if (!panel)
+          return;
+
+        SettingsCache.removeEventListener('settingsChange',
+          _settingsChangeHandler);
+        panel.removeEventListener('change', _onInputChange);
+        panel.removeEventListener('click', _onLinkClick);
+      };
+
+      _init = _init || _emptyFunc;
       _uninit = _uninit || _emptyFunc;
       _ready = _ready || _emptyFunc;
       _done = _done || _emptyFunc;
 
       return {
-        init: function(panel, options, callback) {
-          if (_initialized) {
-            _proceed(callback);
+        init: function(panel, options) {
+          if (_initialized)
             return;
-          }
           _initialized = true;
 
           _panel = panel;
-
           _activate(panel);
-          _preset(panel);
-          _addListeners(panel);
 
-          _init(panel, options, callback);
+          _init(panel, options);
         },
         uninit: function() {
           if (!_initialized)
             return;
           _initialized = false;
 
+          _removeListeners(_panel);
+          _panel = null;
+
           _uninit();
         },
         ready: function(panel, options) {
-          this.init(panel, options, function() {
-            _ready(panel, options);
-          });
+          this.init(panel, options);
+
+          // Preset the panel every time when it is presented.
+          _preset(panel);
+          _addListeners(panel);
+
+          _ready(panel, options);
         },
         done: function() {
-          dump("=== done");
+          // Remove listeners.
+          _removeListeners(_panel);
+
           _done();
         }
       };
     };
-    return exports;
+    return Panel;
 });
