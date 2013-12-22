@@ -2,7 +2,7 @@
 
 define('panels/SoundPanel',
   ['modules/Panel', 'modules/Utils', 'shared/js/settings_listener'],
-  function (Panel, Utils) {
+  function(Panel, Utils) {
     var _init = function sp_init(rootElement, options) {
       var _ = navigator.mozL10n.get;
 

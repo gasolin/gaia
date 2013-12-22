@@ -1,5 +1,5 @@
-define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
-  function(SettingsService, SettingsCache) {
+define('modules/Panel', ['modules/SettingsCache'],
+  function(SettingsCache) {
     var _settings = navigator.mozSettings;
 
     var _activate = function panel_activate(panel) {
@@ -180,7 +180,10 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
         return;
       }
 
-      SettingsService.navigate(href.slice(1));
+      // XXX: Avoid circular dependencies.
+      require(['modules/SettingsService'], function(SettingsService) {
+        SettingsService.navigate(href.slice(1));
+      });
       event.preventDefault();
     };
 
@@ -286,7 +289,7 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       var _panel = null;
       var _settingsChangeHandler = function(event) {
         if (_panel) {
-          _onSettingsChange(event, _panel);
+          _onSettingsChange(_panel, event);
         }
       };
 
