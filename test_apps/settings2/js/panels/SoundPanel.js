@@ -3,7 +3,6 @@
 define('panels/SoundPanel',
   ['modules/Panel', 'modules/Utils', 'shared/js/settings_listener'],
   function (Panel, Utils) {
-    var _initialized = false;
     var _init = function sp_init(rootElement, options) {
       var _ = navigator.mozL10n.get;
 
@@ -142,18 +141,5 @@ define('panels/SoundPanel',
       });
     };
 
-    var _ready = function sp_ready(rootElement, options) {
-      this.__proto__.ready(rootElement, options);
-
-      if (!_initialized) {
-        _init(rootElement, options);
-      }
-    };
-
-    var panel = {
-      ready: _ready
-    };
-    panel.__proto__ = Panel();
-
-    return panel;
+    return Panel(_init);
 });

@@ -286,23 +286,53 @@ define('modules/Panel', ['modules/SettingsService', 'modules/SettingsCache'],
       panel.addEventListener('click', _onLinkClick);
     };
 
-    var exports = function() {
+    var _emptyFunc = function panel_emptyFunc() {};
+    var _proceed = function panel_proceed(callback) {
+      if (callback) { callback(); }
+    };
+
+    var exports = function(_init, _uninit, _ready, _done) {
       var _initialized = false;
       var _panel = null;
 
+      _init = _init || function(panel, options, callback) {
+        _proceed(callback);
+      };
+      _uninit = _uninit || _emptyFunc;
+      _ready = _ready || _emptyFunc;
+      _done = _done || _emptyFunc;
+
       return {
-        init: function(panel, options) {
+        init: function(panel, options, callback) {
+          if (_initialized) {
+            _proceed(callback);
+            return;
+          }
           _initialized = true;
+
           _panel = panel;
 
           _activate(panel);
           _preset(panel);
           _addListeners(panel);
+
+          _init(panel, options, callback);
+        },
+        uninit: function() {
+          if (!_initialized)
+            return;
+          _initialized = false;
+
+          _uninit();
         },
         ready: function(panel, options) {
-          if (!_initialized) {
-            this.init(panel, options);
-          }
+          this.init(panel, options, function() {
+            _ready(panel, options);
+          });
+        },
+        done: function() {
+          dump("=== done");
+          _done();
         }
       };
     };
