@@ -1,18 +1,7 @@
 define('panels/BatteryPanel', ['modules/Panel', 'modules/Battery'],
-  function (Panel, Battery) {
-    var _initialized = false;
+  function(Panel, Battery) {
     var _init = function(rootElement, options) {
-      _initialized = true;
-
       _initBatteryText(rootElement);
-    };
-
-    var _ready = function(rootElement, options) {
-      this.__proto__.ready(rootElement, options);
-
-      if (!_initialized) {
-        _init(rootElement, options);
-      }
     };
 
     var _initBatteryText = function(rootElement) {
@@ -28,10 +17,5 @@ define('panels/BatteryPanel', ['modules/Panel', 'modules/Battery'],
       _refreshText();
     };
 
-    var panel = {
-      ready: _ready
-    };
-    panel.__proto__ = Panel();
-
-    return panel;
+    return Panel(_init);
 });
