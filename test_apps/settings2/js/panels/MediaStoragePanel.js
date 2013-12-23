@@ -1,5 +1,11 @@
 define('panels/MediaStoragePanel',
   ['modules/Panel', 'modules/MediaStorage'],
   function(Panel, MediaStorage) {
-    return Panel(MediaStorage.init);
+    return function ctor_MediaStorage() {
+      return Panel({
+        onInit: function(rootElement) {
+          MediaStorage().init(rootElement);
+        }
+      });
+    };
 });

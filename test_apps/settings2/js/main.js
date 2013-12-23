@@ -3,7 +3,6 @@
 (function() {
   var _launchPanel = 'root';
   var _webActivityHandler = function(activityRequest) {
-    dump("=== activity handler");
     var name = activityRequest.source.name;
     switch (name) {
       case 'configure':
