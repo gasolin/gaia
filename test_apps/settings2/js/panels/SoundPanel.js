@@ -3,7 +3,7 @@
 define('panels/SoundPanel',
   ['modules/Panel', 'modules/Utils', 'shared/js/settings_listener'],
   function(Panel, Utils) {
-    var _init = function sp_init(rootElement, options) {
+    var _onInit = function sp_init(rootElement) {
       var _ = navigator.mozL10n.get;
 
       // Show the touch tone selector if and only if we're on a CDMA network
@@ -141,5 +141,9 @@ define('panels/SoundPanel',
       });
     };
 
-    return Panel(_init);
+    return function ctor_SoundPanel() {
+      return Panel({
+        onInit: _onInit
+      });
+    };
 });

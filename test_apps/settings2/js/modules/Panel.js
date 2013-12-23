@@ -284,9 +284,16 @@ define('modules/Panel', ['modules/SettingsCache'],
 
     var _emptyFunc = function panel_emptyFunc() {};
 
-    var Panel = function(_init, _uninit, _ready, _done) {
+    var Panel = function(panelOptions) {
       var _initialized = false;
       var _panel = null;
+
+      panelOptions = panelOptions || {};
+      var _onInit = panelOptions.onInit || _emptyFunc;
+      var _onUninit = panelOptions.onUninit || _emptyFunc;
+      var _onReady = panelOptions.onReady || _emptyFunc;
+      var _onDone = panelOptions.onDone || _emptyFunc;
+
       var _settingsChangeHandler = function(event) {
         if (_panel) {
           _onSettingsChange(_panel, event);
@@ -313,13 +320,8 @@ define('modules/Panel', ['modules/SettingsCache'],
         panel.removeEventListener('click', _onLinkClick);
       };
 
-      _init = _init || _emptyFunc;
-      _uninit = _uninit || _emptyFunc;
-      _ready = _ready || _emptyFunc;
-      _done = _done || _emptyFunc;
-
       return {
-        init: function(panel, options) {
+        init: function(panel, initOptions) {
           if (_initialized)
             return;
           _initialized = true;
@@ -327,7 +329,7 @@ define('modules/Panel', ['modules/SettingsCache'],
           _panel = panel;
           _activate(panel);
 
-          _init(panel, options);
+          _onInit(panel, initOptions);
         },
         uninit: function() {
           if (!_initialized)
@@ -337,22 +339,22 @@ define('modules/Panel', ['modules/SettingsCache'],
           _removeListeners(_panel);
           _panel = null;
 
-          _uninit();
+          _onUninit();
         },
-        ready: function(panel, options) {
-          this.init(panel, options);
+        ready: function(panel, readyOptions) {
+          this.init(panel, readyOptions);
 
           // Preset the panel every time when it is presented.
           _preset(panel);
           _addListeners(panel);
 
-          _ready(panel, options);
+          _onReady(panel, readyOptions);
         },
         done: function() {
           // Remove listeners.
           _removeListeners(_panel);
 
-          _done();
+          _onDone();
         }
       };
     };
