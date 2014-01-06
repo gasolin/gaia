@@ -1,5 +1,9 @@
-define('modules/Panel', ['modules/SettingsCache'],
+/**
+ * @fileoverview Base panel class
+ */
+define('modules/SettingsPanel', ['modules/SettingsCache'],
   function(SettingsCache) {
+    'use strict';
     var _settings = navigator.mozSettings;
 
     var _activate = function panel_activate(panel) {

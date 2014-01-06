@@ -1,5 +1,6 @@
 define('modules/Wallpaper', ['shared/js/settings_url'],
   function() {
+    'use strict';
     return {
       getAllElements: function wallpaper_getAllElements() {
         this.preview = document.getElementById('wallpaper-preview');

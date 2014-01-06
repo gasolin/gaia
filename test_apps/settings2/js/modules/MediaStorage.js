@@ -1,7 +1,6 @@
-'use strict';
-
 define('modules/MediaStorage', ['modules/Volume', 'modules/SettingsCache'],
   function(Volume, SettingsCache) {
+    'use strict';
     /**
      * The whole purpose of this code is to detect when we're in the state of
      * having the UMS Enabled checkbox unchecked, but the SD-card is still being

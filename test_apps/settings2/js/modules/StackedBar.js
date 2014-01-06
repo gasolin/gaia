@@ -1,6 +1,5 @@
-'use strict';
-
 define(function() {
+  'use strict';
   var StackedBar = function(div) {
     var container = div;
     var items = [];

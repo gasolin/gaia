@@ -1,5 +1,10 @@
-define('panels/RootPanel', ['modules/Panel', 'modules/Battery'],
-  function(Panel, Battery) {
+/**
+ * Used to show Main Settings panel.
+ * Battery module is needed to show bettery level percent on main panel.
+ */
+define('panels/RootPanel', ['modules/SettingsPanel', 'modules/Battery'],
+  function(SettingsPanel, Battery) {
+    'use strict';
     return function ctor_RootPanel() {
       var BatteryItem = (function() {
         var _batteryLevelText = null;
@@ -24,7 +29,7 @@ define('panels/RootPanel', ['modules/Panel', 'modules/Battery'],
         };
       })();
 
-      return Panel({
+      return SettingsPanel({
         onInit: function(rootElement) {
           BatteryItem.init(rootElement);
         },

@@ -1,6 +1,6 @@
-'use strict';
-
-define('modules/PanelCache', ['modules/Panel'], function(Panel) {
+define('modules/PanelCache', ['modules/SettingsPanel'],
+  function(SettingsPanel) {
+  'use strict';
   var _panelCache = {};
 
   return {
@@ -19,7 +19,7 @@ define('modules/PanelCache', ['modules/Panel'], function(Panel) {
 
         require([path], function(panelFunc) {
           // Create a new panel object for static panels.
-          var panel = panelFunc ? panelFunc() : Panel();
+          var panel = panelFunc ? panelFunc() : SettingsPanel();
           _panelCache[panelId] = panel;
           callback(panel);
         });

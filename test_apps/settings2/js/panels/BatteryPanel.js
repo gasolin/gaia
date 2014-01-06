@@ -1,5 +1,9 @@
-define('panels/BatteryPanel', ['modules/Panel', 'modules/Battery'],
-  function(Panel, Battery) {
+/**
+ * Used to show Device/Battery panel
+ */
+define('panels/BatteryPanel', ['modules/SettingsPanel', 'modules/Battery'],
+  function(SettingsPanel, Battery) {
+    'use strict';
     return function ctor_BatteryPanel() {
       var _batteryLevelText = null;
       var _refreshText = function() {
@@ -8,7 +12,7 @@ define('panels/BatteryPanel', ['modules/Panel', 'modules/Battery'],
                                    { level: Battery.level });
       };
 
-      return Panel({
+      return SettingsPanel({
         onInit: function(rootElement) {
           _batteryLevelText = rootElement.querySelector('#battery-level *');
         },
