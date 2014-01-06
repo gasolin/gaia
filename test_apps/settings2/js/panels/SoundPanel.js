@@ -1,8 +1,10 @@
-'use strict';
-
+/**
+ * Used to show Personalization/Sound panel
+ */
 define('panels/SoundPanel',
-  ['modules/Panel', 'modules/Utils', 'shared/js/settings_listener'],
-  function(Panel, Utils) {
+  ['modules/SettingsPanel', 'modules/Utils', 'shared/js/settings_listener'],
+  function(SettingsPanel, Utils) {
+    'use strict';
     var _onInit = function sp_init(rootElement) {
       var _ = navigator.mozL10n.get;
 
@@ -142,7 +144,7 @@ define('panels/SoundPanel',
     };
 
     return function ctor_SoundPanel() {
-      return Panel({
+      return SettingsPanel({
         onInit: _onInit
       });
     };

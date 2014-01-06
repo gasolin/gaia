@@ -1,8 +1,7 @@
-'use strict';
-
 define('modules/SettingsService',
   ['modules/PageTransitions', 'modules/PanelCache', 'shared/js/lazy_loader'],
   function(PageTransitions, PanelCache) {
+    'use strict';
     var _currentPanelId = null;
     var _currentPanel = null;
 

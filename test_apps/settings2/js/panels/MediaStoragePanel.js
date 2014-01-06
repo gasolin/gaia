@@ -1,8 +1,12 @@
+/**
+ * Used to show Storage/Media storage panel
+ */
 define('panels/MediaStoragePanel',
-  ['modules/Panel', 'modules/MediaStorage'],
-  function(Panel, MediaStorage) {
+  ['modules/SettingsPanel', 'modules/MediaStorage'],
+  function(SettingsPanel, MediaStorage) {
+    'use strict';
     return function ctor_MediaStorage() {
-      return Panel({
+      return SettingsPanel({
         onInit: function(rootElement) {
           MediaStorage().init(rootElement);
         }

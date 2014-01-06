@@ -1,4 +1,5 @@
 define(function() {
+  'use strict';
   return {
     oneColumn: function one_column(oldPanel, newPanel, callback) {
       if (!oldPanel) {

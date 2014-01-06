@@ -19,7 +19,7 @@ function Settings(client) {
 module.exports = Settings;
 
 // origin of the settings app
-const ORIGIN = 'app://settings.gaiamobile.org';
+const ORIGIN = 'app://settings2.gaiamobile.org';
 
 Settings.Selectors = {
   'menuItemsSection': '#root',

@@ -1,8 +1,7 @@
-'use strict';
-
 define('modules/Volume',
   ['modules/StackedBar', 'modules/Utils'],
   function(StackedBar, Utils) {
+    'use strict';
     const MEDIA_TYPE = ['music', 'pictures', 'videos', 'sdcard'];
     const ITEM_TYPE = ['music', 'pictures', 'videos', 'free'];
 

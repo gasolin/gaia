@@ -1,6 +1,5 @@
-'use strict';
-
 define('modules/Battery', ['modules/mvvm/Observable'], function(Observable) {
+  'use strict';
   var _mozBattery = navigator.battery;
 
   var _getLevel = function() {

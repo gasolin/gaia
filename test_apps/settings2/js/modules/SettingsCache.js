@@ -1,6 +1,5 @@
-'use strict';
-
 define(function() {
+  'use strict';
   var _settings = window.navigator.mozSettings;
 
   // Cache of all current settings values.  There's some large stuff

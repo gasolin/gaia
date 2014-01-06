@@ -1,8 +1,10 @@
-'use strict';
-
+/**
+ * Used to show Personalization/Display panel
+ */
 define('panels/DisplayPanel',
-  ['modules/Panel', 'modules/Wallpaper', 'modules/Utils'],
-  function(Panel, Wallpaper, Utils) {
+  ['modules/SettingsPanel', 'modules/Wallpaper', 'modules/Utils'],
+  function(SettingsPanel, Wallpaper, Utils) {
+    'use strict';
     return function ctor_DisplayPanel() {
       var _onInit = function dp_onInit(rootElement) {
         var panel = rootElement;
@@ -40,7 +42,7 @@ define('panels/DisplayPanel',
         Wallpaper.init();
       };
 
-      return Panel({
+      return SettingsPanel({
         onInit: _onInit
       });
     };
