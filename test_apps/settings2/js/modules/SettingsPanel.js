@@ -1,7 +1,8 @@
 /**
  * @fileoverview Settings panel class
  */
-define('modules/SettingsPanel', ['modules/Panel', 'modules/SettingsCache'],
+define('modules/SettingsPanel',
+  ['modules/Panel', 'modules/SettingsCache', 'shared/js/lazy_loader'],
   function(Panel, SettingsCache) {
     'use strict';
     var _settings = navigator.mozSettings;
