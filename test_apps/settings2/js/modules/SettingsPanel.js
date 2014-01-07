@@ -1,8 +1,8 @@
 /**
- * @fileoverview Base panel class
+ * @fileoverview Settings panel class
  */
-define('modules/SettingsPanel', ['modules/SettingsCache'],
-  function(SettingsCache) {
+define('modules/SettingsPanel', ['modules/Panel', 'modules/SettingsCache'],
+  function(Panel, SettingsCache) {
     'use strict';
     var _settings = navigator.mozSettings;
 
@@ -287,16 +287,8 @@ define('modules/SettingsPanel', ['modules/SettingsCache'],
     };
 
     var _emptyFunc = function panel_emptyFunc() {};
-
-    var Panel = function(panelOptions) {
-      var _initialized = false;
+    return function ctor_SettingsPanel(options) {
       var _panel = null;
-
-      panelOptions = panelOptions || {};
-      var _onInit = panelOptions.onInit || _emptyFunc;
-      var _onUninit = panelOptions.onUninit || _emptyFunc;
-      var _onReady = panelOptions.onReady || _emptyFunc;
-      var _onDone = panelOptions.onDone || _emptyFunc;
 
       var _settingsChangeHandler = function(event) {
         if (_panel) {
@@ -324,43 +316,38 @@ define('modules/SettingsPanel', ['modules/SettingsCache'],
         panel.removeEventListener('click', _onLinkClick);
       };
 
-      return {
-        init: function(panel, initOptions) {
-          if (_initialized)
-            return;
-          _initialized = true;
+      options = options || {};
+      options.onInit = options.onInit || _emptyFunc;
+      options.onUninit = options.onUninit || _emptyFunc;
+      options.onReady = options.onReady || _emptyFunc;
+      options.onDone = options.onDone || _emptyFunc;
 
+      return Panel({
+        onInit: function(panel, initOptions) {
           _panel = panel;
           _activate(panel);
 
-          _onInit(panel, initOptions);
+          options.onInit(panel, initOptions);
         },
-        uninit: function() {
-          if (!_initialized)
-            return;
-          _initialized = false;
-
+        onUninit: function() {
           _removeListeners(_panel);
           _panel = null;
 
-          _onUninit();
+          options.onUninit();
         },
-        ready: function(panel, readyOptions) {
-          this.init(panel, readyOptions);
-
+        onReady: function(panel, readyOptions) {
           // Preset the panel every time when it is presented.
           _preset(panel);
           _addListeners(panel);
 
-          _onReady(panel, readyOptions);
+          options.onReady(panel, readyOptions);
         },
-        done: function() {
+        onDone: function() {
           // Remove listeners.
           _removeListeners(_panel);
 
-          _onDone();
+          options.onDone();
         }
-      };
+      });
     };
-    return Panel;
 });

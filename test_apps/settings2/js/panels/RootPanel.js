@@ -5,6 +5,7 @@
 define('panels/RootPanel', ['modules/SettingsPanel', 'modules/Battery'],
   function(SettingsPanel, Battery) {
     'use strict';
+
     return function ctor_RootPanel() {
       var BatteryItem = (function() {
         var _batteryLevelText = null;
