@@ -19,7 +19,7 @@ define('modules/PanelCache', ['modules/SettingsPanel'],
 
         require([path], function(panelFunc) {
           // Create a new panel object for static panels.
-          var panel = panelFunc ? new panelFunc() : new SettingsPanel();
+          var panel = panelFunc ? panelFunc() : SettingsPanel();
           _panelCache[panelId] = panel;
           callback(panel);
         });
