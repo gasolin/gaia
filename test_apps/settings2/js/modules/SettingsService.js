@@ -1,3 +1,6 @@
+/**
+ * @fileoverview navigate between panels.
+ */
 define('modules/SettingsService',
   ['modules/PageTransitions', 'modules/PanelCache', 'shared/js/lazy_loader'],
   function(PageTransitions, PanelCache) {
