@@ -34,7 +34,7 @@ define('modules/PanelCache',
   // load styles in idle time after document loaded
   navigator.addIdleObserver({
     time: 3,
-    onidle: _loadPanelStylesheetsIfNeeded;
+    onidle: _loadPanelStylesheetsIfNeeded
   });
 
   return {
@@ -43,7 +43,7 @@ define('modules/PanelCache',
         return;
 
       if (panelId !== 'root') {
-        _loadPanelStylesheetsIfNeeded(panelId);
+        _loadPanelStylesheetsIfNeeded();
       }
 
       var cachedPanel = _panelCache[panelId];
