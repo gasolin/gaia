@@ -266,27 +266,6 @@ var Settings = {
         }
       });
     }
-  },
-
-  loadPanelStylesheetsIfNeeded: function settings_loadPanelStylesheetsIN() {
-    var self = this;
-    if (self._panelStylesheetsLoaded) {
-      return;
-    }
-
-    LazyLoader.load(['shared/style/action_menu.css',
-                     'shared/style/buttons.css',
-                     'shared/style/confirm.css',
-                     'shared/style/input_areas.css',
-                     'shared/style_unstable/progress_activity.css',
-                     'style/apps.css',
-                     'style/phone_lock.css',
-                     'style/simcard.css',
-                     'style/updates.css',
-                     'style/downloads.css'],
-    function callback() {
-      self._panelStylesheetsLoaded = true;
-    });
   }
 };
 
@@ -294,11 +273,6 @@ var Settings = {
 window.addEventListener('load', function loadSettings() {
   window.removeEventListener('load', loadSettings);
   window.addEventListener('change', Settings);
-
-  navigator.addIdleObserver({
-    time: 3,
-    onidle: Settings.loadPanelStylesheetsIfNeeded.bind(Settings)
-  });
 
   Settings.init();
 
@@ -309,7 +283,6 @@ window.addEventListener('load', function loadSettings() {
 
     LazyLoader.load([
       'js/airplane_mode.js',
-      'js/battery.js',
       'shared/js/async_storage.js',
       'js/storage.js',
       'js/try_show_homescreen_section.js',

@@ -1,6 +1,8 @@
-'strict';
-
+/**
+ * @fileoverview entrypoint to launch first panel.
+ */
 (function() {
+  'strict';
   var _launchPanel = 'root';
   var _webActivityHandler = function(activityRequest) {
     var name = activityRequest.source.name;
