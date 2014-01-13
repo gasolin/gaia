@@ -73,8 +73,14 @@ function openPanel(selector, parentSelector) {
   parentSelector = parentSelector || 'menuItemsSection';
   menuItem = this.waitForElement(selector);
   parentSection = this.waitForElement(parentSelector);
-  menuItem.tap();
+  // XXX Workaround to
+  // click a element just displayed partially in screen.
+  menuItem.tap(0, 0);
   this.client.waitFor(function() {
-    return parentSection.location()['x'] + parentSection.size()['width'] == 0;
-  });
+    // XXX Workaround to
+    // make sure that the parentSelector is non-displayed.
+    var visibility = this.findElement(parentSelector)
+                         .cssProperty('visibility');
+    return visibility === 'collapse';
+  }.bind(this));
 }
