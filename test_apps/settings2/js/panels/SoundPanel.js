@@ -2,8 +2,8 @@
  * Used to show Personalization/Sound panel
  */
 define('panels/SoundPanel',
-  ['modules/SettingsPanel', 'modules/Utils', 'shared/js/settings_listener'],
-  function(SettingsPanel, Utils) {
+  ['modules/SettingsPanel', 'modules/Utils', 'SettingsListener'],
+  function(SettingsPanel, Utils, SettingsListener) {
     'use strict';
     var _onInit = function sp_init(rootElement) {
       var _ = navigator.mozL10n.get;

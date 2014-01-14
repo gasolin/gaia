@@ -41,15 +41,30 @@
   // Register the handler as soon as possible.
   navigator.mozSetMessageHandler('activity', _webActivityHandler);
 
-  require({
+  require.config({
+    // enforceDefine: true, // uncomment to debug shim exports
     paths: {
-      'shared': '../shared'
+      'shared': '../shared',
+      'LazyLoader': '../shared/js/lazy_loader',
+      'SettingsListener': '../shared/js/settings_listener',
+      'SettingsURL': '../shared/js/settings_url'
+    },
+    shim: {
+      'LazyLoader': {
+        exports: 'LazyLoader'
+      },
+      'SettingsListener': {
+        exports: 'SettingsListener'
+      },
+      'SettingsURL': {
+        exports: 'SettingsURL'
+      }
     }
   });
 
   require([
     'modules/SettingsService'
-  ], function (SettingsService) {
+  ], function(SettingsService) {
     if (!navigator.mozSettings || !navigator.mozSetMessageHandler) {
       return;
     }

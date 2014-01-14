@@ -1,5 +1,5 @@
-define('modules/Wallpaper', ['shared/js/settings_url'],
-  function() {
+define('modules/Wallpaper', ['SettingsURL'],
+  function(SettingsURL) {
     'use strict';
     return {
       getAllElements: function wallpaper_getAllElements() {
