@@ -3,8 +3,8 @@
  * Cache panel and resources for reuse.
  */
 define('modules/PanelCache',
-  ['modules/SettingsPanel', 'shared/js/lazy_loader'],
-  function(SettingsPanel) {
+  ['modules/SettingsPanel', 'LazyLoader'],
+  function(SettingsPanel, LazyLoader) {
   'use strict';
   var _panelCache = {};
   var _panelStylesheetsLoaded = false;
