@@ -248,24 +248,6 @@ var Settings = {
 
     reset(); // preset all fields before opening the dialog
     openDialog(dialogID, submit);
-  },
-
-  getSupportedLanguages: function settings_getLanguages(callback) {
-    if (!callback)
-      return;
-
-    if (this._languages) {
-      callback(this._languages);
-    } else {
-      var self = this;
-      var LANGUAGES = '/shared/resources/languages.json';
-      loadJSON(LANGUAGES, function loadLanguages(data) {
-        if (data) {
-          self._languages = data;
-          callback(self._languages);
-        }
-      });
-    }
   }
 };
 
@@ -277,8 +259,6 @@ window.addEventListener('load', function loadSettings() {
   Settings.init();
 
   setTimeout(function nextTick() {
-    LazyLoader.load(['js/utils.js'], startupLocale);
-
     LazyLoader.load(['shared/js/wifi_helper.js'], displayDefaultPanel);
 
     LazyLoader.load([
@@ -453,28 +433,6 @@ window.addEventListener('keydown', function handleSpecialKeys(event) {
     event.preventDefault();
   }
 });
-
-// startup & language switching
-function startupLocale() {
-  navigator.mozL10n.ready(function startupLocale() {
-    initLocale();
-    // XXX this might call `initLocale()` twice until bug 882592 is fixed
-    window.addEventListener('localized', initLocale);
-  });
-}
-
-function initLocale() {
-  var lang = navigator.mozL10n.language.code;
-
-  // set the 'lang' and 'dir' attributes to <html> when the page is translated
-  document.documentElement.lang = lang;
-  document.documentElement.dir = navigator.mozL10n.language.direction;
-
-  // display the current locale in the main panel
-  Settings.getSupportedLanguages(function displayLang(languages) {
-    document.getElementById('language-desc').textContent = languages[lang];
-  });
-}
 
 // Do initialization work that doesn't depend on the DOM, as early as
 // possible in startup.
