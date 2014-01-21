@@ -17,3 +17,4 @@ apps/gallery/test/unit/setImmediate_test.js
 apps/wappush/js/ext/**
 apps/keyboard/js/imes/jsavrophonetic/jsavrophonetic.js
 apps/camera/js/vendor/alameda.js
+apps/settings/js/vendor/alameda.js
