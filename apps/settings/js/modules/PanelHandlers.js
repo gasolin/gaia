@@ -1,5 +1,6 @@
 /**
- * @fileoverview PanelUtils
+ * @fileoverview handle panel stats like
+ * preset, activate, onLinkClick, onSettingsChange, onInputChange.
  */
 define(['modules/SettingsCache'], function(SettingsCache) {
   'use strict';

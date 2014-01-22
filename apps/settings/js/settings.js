@@ -112,18 +112,18 @@ var Settings = {
   // Early initialization of parts of the application that don't
   // depend on the DOM being loaded.
   preInit: function settings_preInit(
-    SettingsCache, PanelUtils, PageTransitions) {
+    SettingsCache, PanelHandlers, PageTransitions) {
     var settings = this.mozSettings;
     if (!settings)
       return;
 
     this.SettingsCache = SettingsCache;
-    this.PanelUtils = PanelUtils;
+    this.PanelHandlers = PanelHandlers;
     this.PageTransitions = PageTransitions;
 
     // update corresponding setting when it changes
     settings.onsettingchange =
-      this.PanelUtils.onSettingsChange.bind(this, document);
+      this.PanelHandlers.onSettingsChange.bind(this, document);
   },
 
   _initialized: false,
@@ -165,7 +165,7 @@ var Settings = {
   },
 
   afterPanelLoad: function(panel, cb) {
-    this.PanelUtils.activate(panel);
+    this.PanelHandlers.activate(panel);
     if (cb) {
       cb();
     }
@@ -215,7 +215,7 @@ var Settings = {
   },
 
   presetPanel: function settings_presetPanel(panel) {
-    this.PanelUtils.preset(panel);
+    this.PanelHandlers.preset(panel);
   },
 
   // An activity can be closed either by pressing the 'X' button
@@ -305,7 +305,7 @@ var Settings = {
   },
 
   handleEvent: function settings_handleEvent(event) {
-    this.PanelUtils.onInputChange(event);
+    this.PanelHandlers.onInputChange(event);
   },
 
   openDialog: function settings_openDialog(dialogID) {
@@ -509,7 +509,7 @@ window.addEventListener('load', function loadSettings() {
   }
 
   // startup
-  document.addEventListener('click', Settings.PanelUtils.onLinkClick);
+  document.addEventListener('click', Settings.PanelHandlers.onLinkClick);
 });
 
 // back button = close dialog || back to the root page
