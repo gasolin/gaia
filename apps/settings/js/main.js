@@ -1,8 +1,8 @@
 (function() {
-  'strict';
-  require(['settings', 'modules/SettingsCache', 'modules/PanelUtils',
-           'modules/PageTransitions'],
-    function(Settings, SettingsCache, PanelUtils, PageTransitions) {
+  require(['modules/SettingsCache', 'modules/PanelUtils',
+           'modules/PageTransitions', 'settings'],
+    function(SettingsCache, PanelUtils, PageTransitions, Settings) {
+      'strict';
       Settings.preInit(SettingsCache, PanelUtils, PageTransitions);
   });
 })();

@@ -7,5 +7,10 @@ require.config({
     'settings': {
       exports: 'Settings'
     }
-  }
+  },
+  modules: [
+    {
+      name: 'main'
+    }
+  ]
 });
