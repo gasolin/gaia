@@ -1,8 +1,4 @@
-/* -*- Mode: js; js-indent-level: 2; indent-tabs-mode: nil -*- */
-/* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
-
 'use strict';
-
 /**
  * Debug note: to test this app in a desktop browser, you'll have to set
  * the `dom.mozSettings.enabled' preference to false in order to avoid an
@@ -41,7 +37,7 @@ var Settings = {
       if (panelsWithCurrentClass.length === 1 &&
         panelsWithCurrentClass[0].id === 'root') {
         // go to default panel
-        Settings.currentPanel = Settings.defaultPanelForTablet;
+        Settings.navigate(Settings.defaultPanelForTablet);
       }
     }
     Settings._isTabletAndLandscapeLastTime = isTabletAndLandscapeThisTime;
@@ -57,20 +53,20 @@ var Settings = {
 
   defaultPanelForTablet: '#wifi',
 
-  _currentPanel: '#root',
+  _currentPanelId: '#root',
 
   _currentActivity: null,
 
   get currentPanel() {
-    return this._currentPanel;
+    return this._currentPanelId;
   },
 
-  set currentPanel(hash) {
-    if (!hash.startsWith('#')) {
-      hash = '#' + hash;
+  navigate: function s_navigate(panelId, options) {
+    if (!panelId.startsWith('#')) {
+      panelId = '#' + panelId;
     }
 
-    if (hash == this._currentPanel) {
+    if (panelId == this._currentPanelId) {
       return;
     }
 
@@ -78,19 +74,19 @@ var Settings = {
     // close the activity.
     // XXX this assumes the 'back' button of the activity panel
     //     points to the root panel.
-    if (this._currentActivity !== null && hash === '#root') {
+    if (this._currentActivity !== null && panelId === '#root') {
       Settings.finishActivityRequest();
       return;
     }
 
-    if (hash === '#wifi') {
+    if (panelId === '#wifi') {
       PerformanceTestingHelper.dispatch('start');
     }
-    var oldPanelHash = this._currentPanel;
-    var oldPanel = document.querySelector(this._currentPanel);
-    this._currentPanel = hash;
-    var newPanelHash = this._currentPanel;
-    var newPanel = document.querySelector(this._currentPanel);
+    var oldPanelId = this._currentPanelId;
+    var oldPanel = document.querySelector(this._currentPanelId);
+    this._currentPanelId = panelId;
+    var newPanelId = this._currentPanelId;
+    var newPanel = document.querySelector(this._currentPanelId);
 
     // load panel (+ dependencies) if necessary -- this should be synchronous
     this.lazyLoad(newPanel);
@@ -287,7 +283,7 @@ var Settings = {
 
         // Go to that section
         setTimeout(function settings_goToSection() {
-          Settings.currentPanel = section;
+          Settings.navigate(section);
         });
         break;
       default:
@@ -485,7 +481,7 @@ window.addEventListener('load', function loadSettings() {
     // display of default panel(#wifi) must wait for
     // lazy-loaded script - wifi_helper.js - loaded
     if (Settings.isTabletAndLandscape()) {
-      Settings.currentPanel = Settings.defaultPanelForTablet;
+      Settings.navigate(Settings.defaultPanelForTablet);
     }
   }
 
@@ -525,7 +521,7 @@ window.addEventListener('keydown', function handleSpecialKeys(event) {
       dialog.classList.remove('active');
       document.body.classList.remove('dialog');
     } else {
-      Settings.currentPanel = '#root';
+      Settings.navigate('#root');
     }
   } else if (event.keyCode === event.DOM_VK_RETURN) {
     event.target.blur();

@@ -9,6 +9,7 @@ define(function() {
       var event = new CustomEvent('panelready', {detail: detail});
       window.dispatchEvent(event);
     },
+    /** phone size device layout */
     oneColumn: function one_column(oldPanel, newPanel, callback) {
       var self = this;
       // switch previous/current classes
@@ -40,11 +41,13 @@ define(function() {
           if (oldPanel.className === 'current')
             return;
 
-          if (callback)
+          if (callback) {
             callback();
+          }
         });
       });
     },
+    /** tablet size device layout */
     twoColumn: function two_column(oldPanel, newPanel, callback) {
       oldPanel.className = newPanel.className ? '' : 'previous';
       newPanel.className = 'current';
