@@ -1,4 +1,5 @@
 'use strict';
+
 /**
  * Debug note: to test this app in a desktop browser, you'll have to set
  * the `dom.mozSettings.enabled' preference to false in order to avoid an
@@ -51,13 +52,14 @@ var Settings = {
     }
   },
 
-  defaultPanelForTablet: '#wifi',
+  DEFAULT_TABLET_PANEL_ID: '#wifi',
+  DEFAULT_PANEL_ID: '#root',
 
-  _currentPanelId: '#root',
+  _currentPanelId: DEFAULT_PANEL_ID,
 
   _currentActivity: null,
 
-  get currentPanel() {
+  get currentPanelId() {
     return this._currentPanelId;
   },
 
@@ -74,12 +76,13 @@ var Settings = {
     // close the activity.
     // XXX this assumes the 'back' button of the activity panel
     //     points to the root panel.
-    if (this._currentActivity !== null && panelId === '#root') {
+    if (this._currentActivity !== null &&
+        panelId === Settings.DEFAULT_PANEL_ID) {
       Settings.finishActivityRequest();
       return;
     }
 
-    if (panelId === '#wifi') {
+    if (panelId === Settings.DEFAULT_TABLET_PANEL_ID) {
       PerformanceTestingHelper.dispatch('start');
     }
     var oldPanelId = this._currentPanelId;
@@ -478,10 +481,10 @@ window.addEventListener('load', function loadSettings() {
       '(min-width: 768px) and (orientation: landscape)');
     window.addEventListener('screenlayoutchange', Settings.rotate);
 
-    // display of default panel(#wifi) must wait for
+    // display of default panel(DEFAULT_TABLET_PANEL_ID) must wait for
     // lazy-loaded script - wifi_helper.js - loaded
     if (Settings.isTabletAndLandscape()) {
-      Settings.navigate(Settings.defaultPanelForTablet);
+      Settings.navigate(Settings.DEFAULT_TABLET_PANEL_ID);
     }
   }
 
@@ -511,7 +514,7 @@ window.addEventListener('load', function loadSettings() {
 // back button = close dialog || back to the root page
 // + prevent the [Return] key to validate forms
 window.addEventListener('keydown', function handleSpecialKeys(event) {
-  if (Settings.currentPanel != '#root' &&
+  if (Settings.currentPanelId != Settings.DEFAULT_PANEL_ID &&
       event.keyCode === event.DOM_VK_ESCAPE) {
     event.preventDefault();
     event.stopPropagation();
@@ -521,7 +524,7 @@ window.addEventListener('keydown', function handleSpecialKeys(event) {
       dialog.classList.remove('active');
       document.body.classList.remove('dialog');
     } else {
-      Settings.navigate('#root');
+      Settings.navigate(Settings.DEFAULT_PANEL_ID);
     }
   } else if (event.keyCode === event.DOM_VK_RETURN) {
     event.target.blur();
