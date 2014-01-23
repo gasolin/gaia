@@ -1,6 +1,3 @@
-/* -*- Mode: js; js-indent-level: 2; indent-tabs-mode: nil -*- */
-/* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
-
 'use strict';
 
 /**
@@ -92,7 +89,8 @@ var Settings = {
     if (panelID.startsWith('#')) {
       panelID = panelID.substring(1);
     }
-    this.SettingsService.navigate(panelID, null, function() {
+    this.SettingsService.navigate(this.isTabletAndLandscape(), panelID, null,
+      function() {
       self._currentPanel = hash;
 
       switch (hash) {

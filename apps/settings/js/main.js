@@ -1,8 +1,8 @@
 (function() {
   'strict';
-  require(['settings', 'modules/SettingsService', 'modules/SettingsCache',
-           'modules/PageTransitions'],
-    function(Settings, SettingsService, SettingsCache, PageTransitions) {
+  require(['modules/SettingsService', 'modules/SettingsCache',
+           'modules/PageTransitions', 'settings'],
+    function(SettingsService, SettingsCache, PageTransitions, Settings) {
       var options = {
         SettingsService: SettingsService,
         SettingsCache: SettingsCache,

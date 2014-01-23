@@ -7,7 +7,8 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
     var _currentPanelId = null;
     var _currentPanel = null;
 
-    var _navigate = function ss_navigate(panelId, options, callback) {
+    var _navigate = function ss_navigate(twoColumn,
+      panelId, options, callback) {
       _loadPanel(panelId, function() {
         var newPanelElement = document.getElementById(panelId);
         var currentPanelElement =
@@ -20,7 +21,7 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
           panel.ready(newPanelElement, options);
 
           // Do transition
-          PageTransitions.oneColumn(currentPanelElement, newPanelElement);
+          _transit(twoColumn, currentPanelElement, newPanelElement);
 
           _currentPanelId = panelId;
           if (_currentPanel) {
@@ -33,6 +34,15 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
           }
         });
       });
+    };
+
+    var _transit = function ss_transit(twoColumn,
+      oldPanel, newPanel, callback) {
+      if (twoColumn) {
+        PageTransitions.twoColumn(oldPanel, newPanel, callback);
+      } else {
+        PageTransitions.oneColumn(oldPanel, newPanel, callback);
+      }
     };
 
     var _loadPanel = function ss_loadPanel(panelId, callback) {

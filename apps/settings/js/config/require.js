@@ -11,5 +11,10 @@ require.config({
     'LazyLoader': {
       exports: 'LazyLoader'
     }
-  }
+  },
+  modules: [
+    {
+      name: 'main'
+    }
+  ]
 });
