@@ -185,7 +185,7 @@ define(['modules/SettingsCache'], function(SettingsCache) {
     /*require(['SettingsService'], function(SettingsService) {
       SettingsService.navigate(href.slice(1));
     });*/
-    Settings.currentPanel = href;
+    Settings.navigate(href);
     event.preventDefault();
   };
 

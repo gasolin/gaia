@@ -38,7 +38,7 @@ var Settings = {
       if (panelsWithCurrentClass.length === 1 &&
         panelsWithCurrentClass[0].id === 'root') {
         // go to default panel
-        Settings.navigate(Settings.defaultPanelForTablet);
+        Settings.navigate(Settings.DEFAULT_TABLET_PANEL_ID);
       }
     }
     Settings._isTabletAndLandscapeLastTime = isTabletAndLandscapeThisTime;
@@ -55,7 +55,7 @@ var Settings = {
   DEFAULT_TABLET_PANEL_ID: '#wifi',
   DEFAULT_PANEL_ID: '#root',
 
-  _currentPanelId: DEFAULT_PANEL_ID,
+  _currentPanelId: '#root',
 
   _currentActivity: null,
 
