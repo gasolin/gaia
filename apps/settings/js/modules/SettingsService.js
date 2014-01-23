@@ -52,7 +52,20 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
         return;
       }
       panelElement.dataset.rendered = true;
-      LazyLoader.load([panelElement], callback);
+
+      // XXX remove SubPanel loader once sub panel are modulized
+      if (panelElement.dataset.requireSubPanels) {
+        // load the panel and its sub-panels (dependencies)
+        // (load the main panel last because it contains the scripts)
+        var selector = 'section[id^="' + panelElement.id + '-"]';
+        var subPanels = document.querySelectorAll(selector);
+        for (var i = 0, il = subPanels.length; i < il; i++) {
+          LazyLoader.load([subPanels[i]]);
+        }
+        LazyLoader.load([panelElement], callback);
+      } else {
+        LazyLoader.load([panelElement], callback);
+      }
     };
 
     return {
