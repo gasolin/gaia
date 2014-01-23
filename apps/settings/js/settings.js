@@ -57,7 +57,7 @@ var Settings = {
 
   defaultPanelForTablet: '#wifi',
 
-  _currentPanel: '#root',
+  _currentPanel: null,
 
   _currentActivity: null,
 
@@ -86,17 +86,16 @@ var Settings = {
     if (hash === '#wifi') {
       PerformanceTestingHelper.dispatch('start');
     }
-    var oldPanelHash = this._currentPanel;
-    var oldPanel = document.querySelector(this._currentPanel);
-    this._currentPanel = hash;
-    var newPanelHash = this._currentPanel;
-    var newPanel = document.querySelector(this._currentPanel);
 
-    // load panel (+ dependencies) if necessary -- this should be synchronous
-    this.lazyLoad(newPanel);
+    var self = this;
+    var panelID = hash;
+    if (panelID.startsWith('#')) {
+      panelID = panelID.substring(1);
+    }
+    this.SettingsService.navigate(panelID, null, function() {
+      self._currentPanel = hash;
 
-    this._transit(oldPanel, newPanel, function() {
-      switch (newPanel.id) {
+      switch (hash) {
         case 'about-licensing':
           // Workaround for bug 825622, remove when fixed
           var iframe = document.getElementById('os-license');
@@ -109,30 +108,81 @@ var Settings = {
     });
   },
 
-  // Early initialization of parts of the application that don't
-  // depend on the DOM being loaded.
-  preInit: function settings_preInit(
-    SettingsCache, PanelUtils, PageTransitions) {
-    var settings = this.mozSettings;
-    if (!settings)
-      return;
-
-    this.SettingsCache = SettingsCache;
-    this.PanelUtils = PanelUtils;
-    this.PageTransitions = PageTransitions;
-
-    // update corresponding setting when it changes
-    settings.onsettingchange =
-      this.PanelUtils.onSettingsChange.bind(this, document);
-  },
-
   _initialized: false,
 
-  init: function settings_init() {
+  init: function settings_init(options) {
     this._initialized = true;
 
     if (!this.mozSettings || !navigator.mozSetMessageHandler) {
       return;
+    }
+
+    this.SettingsService = options.SettingsService;
+    this.SettingsCache = options.SettingsCache;
+    this.PageTransitions = options.PageTransitions;
+
+    setTimeout(function nextTick() {
+      LazyLoader.load(['js/utils.js'], startupLocale);
+
+      LazyLoader.load(['shared/js/wifi_helper.js'], displayDefaultPanel);
+
+      LazyLoader.load([
+        'shared/js/airplane_mode_helper.js',
+        'js/airplane_mode.js',
+        'js/battery.js',
+        'shared/js/async_storage.js',
+        'js/storage.js',
+        'js/try_show_homescreen_section.js',
+        'shared/js/mobile_operator.js',
+        'shared/js/icc_helper.js',
+        'shared/js/settings_listener.js',
+        'shared/js/toaster.js',
+        'js/connectivity.js',
+        'js/security_privacy.js',
+        'js/icc_menu.js',
+        'js/nfc.js',
+        'js/dsds_settings.js',
+        'js/telephony_settings.js',
+        'js/telephony_items_handler.js'
+      ], handleTelephonyItems);
+    });
+
+    function displayDefaultPanel() {
+      // With async pan zoom enable, the page starts with a viewport
+      // of 980px before beeing resize to device-width. So let's delay
+      // the rotation listener to make sure it is not triggered by fake
+      // positive.
+      ScreenLayout.watch(
+        'tabletAndLandscaped',
+        '(min-width: 768px) and (orientation: landscape)');
+      window.addEventListener('screenlayoutchange', Settings.rotate);
+
+      // display of default panel(#wifi) must wait for
+      // lazy-loaded script - wifi_helper.js - loaded
+      if (Settings.isTabletAndLandscape()) {
+        Settings.currentPanel = Settings.defaultPanelForTablet;
+      }
+    }
+
+    /**
+     * Enable or disable the menu items related to the ICC card relying on the
+     * card and radio state.
+     */
+    function handleTelephonyItems() {
+      // we hide all entry points by default,
+      // so we have to detect and show them up
+      if (navigator.mozMobileConnections) {
+        if (navigator.mozMobileConnections.length == 1) {
+          // single sim
+          document.getElementById('simSecurity-settings').hidden = false;
+        } else {
+          // dsds
+          document.getElementById('simCardManager-settings').hidden = false;
+        }
+      }
+
+      AirplaneMode.init();
+      TelephonySettingHelper.init();
     }
 
     // hide telephony related entries if not supportted
@@ -149,56 +199,7 @@ var Settings = {
     // register web activity handler
     navigator.mozSetMessageHandler('activity', this.webActivityHandler);
 
-    // preset all inputs that have a `name' attribute
-    this.presetPanel();
-  },
-
-  loadPanel: function settings_loadPanel(panel, cb) {
-    if (!panel) {
-      return;
-    }
-
-    this.loadPanelStylesheetsIfNeeded();
-
-    // apply the HTML markup stored in the first comment node
-    LazyLoader.load([panel], this.afterPanelLoad.bind(this, panel, cb));
-  },
-
-  afterPanelLoad: function(panel, cb) {
-    this.PanelUtils.activate(panel);
-    if (cb) {
-      cb();
-    }
-  },
-
-  lazyLoad: function settings_lazyLoad(panel) {
-    if (panel.dataset.rendered) { // already initialized
-      return;
-    }
-    panel.dataset.rendered = true;
-
-    if (panel.dataset.requireSubPanels) {
-      // load the panel and its sub-panels (dependencies)
-      // (load the main panel last because it contains the scripts)
-      var selector = 'section[id^="' + panel.id + '-"]';
-      var subPanels = document.querySelectorAll(selector);
-      for (var i = 0, il = subPanels.length; i < il; i++) {
-        this.loadPanel(subPanels[i]);
-      }
-      this.loadPanel(panel, this.panelLoaded.bind(this, panel, subPanels));
-    } else {
-      this.loadPanel(panel, this.panelLoaded.bind(this, panel));
-    }
-  },
-
-  panelLoaded: function(panel, subPanels) {
-    // preset all inputs in the panel and subpanels.
-    if (panel.dataset.requireSubPanels) {
-      for (var i = 0; i < subPanels.length; i++) {
-        this.presetPanel(subPanels[i]);
-      }
-    }
-    this.presetPanel(panel);
+    this.currentPanel = 'root';
   },
 
   // Cache of all current settings values.  There's some large stuff
@@ -212,10 +213,6 @@ var Settings = {
   // settings values, when those values are ready.
   getSettings: function(callback) {
     this.SettingsCache.getSettings(callback);
-  },
-
-  presetPanel: function settings_presetPanel(panel) {
-    this.PanelUtils.preset(panel);
   },
 
   // An activity can be closed either by pressing the 'X' button
@@ -302,10 +299,6 @@ var Settings = {
       document.addEventListener('visibilitychange',
         Settings.visibilityHandler);
     }
-  },
-
-  handleEvent: function settings_handleEvent(event) {
-    this.PanelUtils.onInputChange(event);
   },
 
   openDialog: function settings_openDialog(dialogID) {
@@ -410,107 +403,8 @@ var Settings = {
         }
       });
     }
-  },
-
-  loadPanelStylesheetsIfNeeded: function settings_loadPanelStylesheetsIN() {
-    var self = this;
-    if (self._panelStylesheetsLoaded) {
-      return;
-    }
-
-    LazyLoader.load(['shared/style/action_menu.css',
-                     'shared/style/buttons.css',
-                     'shared/style/confirm.css',
-                     'shared/style/input_areas.css',
-                     'shared/style/progress_activity.css',
-                     'style/apps.css',
-                     'style/phone_lock.css',
-                     'style/simcard.css',
-                     'style/updates.css',
-                     'style/downloads.css'],
-    function callback() {
-      self._panelStylesheetsLoaded = true;
-    });
   }
 };
-
-// apply user changes to 'Settings' + panel navigation
-window.addEventListener('load', function loadSettings() {
-  window.removeEventListener('load', loadSettings);
-  window.addEventListener('change', Settings);
-
-  navigator.addIdleObserver({
-    time: 3,
-    onidle: Settings.loadPanelStylesheetsIfNeeded.bind(Settings)
-  });
-
-  Settings.init();
-
-  setTimeout(function nextTick() {
-    LazyLoader.load(['js/utils.js'], startupLocale);
-
-    LazyLoader.load(['shared/js/wifi_helper.js'], displayDefaultPanel);
-
-    LazyLoader.load([
-      'shared/js/airplane_mode_helper.js',
-      'js/airplane_mode.js',
-      'js/battery.js',
-      'shared/js/async_storage.js',
-      'js/storage.js',
-      'js/try_show_homescreen_section.js',
-      'shared/js/mobile_operator.js',
-      'shared/js/icc_helper.js',
-      'shared/js/settings_listener.js',
-      'shared/js/toaster.js',
-      'js/connectivity.js',
-      'js/security_privacy.js',
-      'js/icc_menu.js',
-      'js/nfc.js',
-      'js/dsds_settings.js',
-      'js/telephony_settings.js',
-      'js/telephony_items_handler.js'
-    ], handleTelephonyItems);
-  });
-
-  function displayDefaultPanel() {
-    // With async pan zoom enable, the page starts with a viewport
-    // of 980px before beeing resize to device-width. So let's delay
-    // the rotation listener to make sure it is not triggered by fake
-    // positive.
-    ScreenLayout.watch(
-      'tabletAndLandscaped',
-      '(min-width: 768px) and (orientation: landscape)');
-    window.addEventListener('screenlayoutchange', Settings.rotate);
-
-    // display of default panel(#wifi) must wait for
-    // lazy-loaded script - wifi_helper.js - loaded
-    if (Settings.isTabletAndLandscape()) {
-      Settings.currentPanel = Settings.defaultPanelForTablet;
-    }
-  }
-
-  /**
-   * Enable or disable the menu items related to the ICC card relying on the
-   * card and radio state.
-   */
-  function handleTelephonyItems() {
-    // we hide all entry points by default,
-    // so we have to detect and show them up
-    if (navigator.mozMobileConnections) {
-      if (navigator.mozMobileConnections.length == 1) {
-        // single sim
-        document.getElementById('simSecurity-settings').hidden = false;
-      } else {
-        // dsds
-        document.getElementById('simCardManager-settings').hidden = false;
-      }
-    }
-    TelephonySettingHelper.init();
-  }
-
-  // startup
-  document.addEventListener('click', Settings.PanelUtils.onLinkClick);
-});
 
 // back button = close dialog || back to the root page
 // + prevent the [Return] key to validate forms
