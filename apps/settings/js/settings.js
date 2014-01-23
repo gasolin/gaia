@@ -1,6 +1,3 @@
-/* -*- Mode: js; js-indent-level: 2; indent-tabs-mode: nil -*- */
-/* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
-
 'use strict';
 
 /**
@@ -47,14 +44,6 @@ var Settings = {
     Settings._isTabletAndLandscapeLastTime = isTabletAndLandscapeThisTime;
   },
 
-  _transit: function transit(oldPanel, newPanel, callback) {
-    if (this.isTabletAndLandscape()) {
-      this.PageTransitions.twoColumn(oldPanel, newPanel, callback);
-    } else {
-      this.PageTransitions.oneColumn(oldPanel, newPanel, callback);
-    }
-  },
-
   defaultPanelForTablet: '#wifi',
 
   _currentPanel: null,
@@ -92,7 +81,8 @@ var Settings = {
     if (panelID.startsWith('#')) {
       panelID = panelID.substring(1);
     }
-    this.SettingsService.navigate(panelID, null, function() {
+    this.SettingsService.navigate(this.isTabletAndLandscape(), panelID, null,
+      function() {
       self._currentPanel = hash;
 
       switch (hash) {
@@ -119,7 +109,6 @@ var Settings = {
 
     this.SettingsService = options.SettingsService;
     this.SettingsCache = options.SettingsCache;
-    this.PageTransitions = options.PageTransitions;
 
     setTimeout(function nextTick() {
       LazyLoader.load(['js/utils.js'], startupLocale);

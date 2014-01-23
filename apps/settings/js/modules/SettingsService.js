@@ -7,7 +7,8 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
     var _currentPanelId = null;
     var _currentPanel = null;
 
-    var _navigate = function ss_navigate(panelId, options, callback) {
+    var _navigate = function ss_navigate(isTabletAndLandscape,
+      panelId, options, callback) {
       _loadPanel(panelId, function() {
         var newPanelElement = document.getElementById(panelId);
         var currentPanelElement =
@@ -20,7 +21,7 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
           panel.ready(newPanelElement, options);
 
           // Do transition
-          PageTransitions.oneColumn(currentPanelElement, newPanelElement);
+          _transit(isTabletAndLandscape, currentPanelElement, newPanelElement);
 
           _currentPanelId = panelId;
           if (_currentPanel) {
@@ -35,6 +36,15 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
       });
     };
 
+    var _transit = function ss_transit(isTabletAndLandscape,
+      oldPanel, newPanel, callback) {
+      if (isTabletAndLandscape) {
+        PageTransitions.twoColumn(oldPanel, newPanel, callback);
+      } else {
+        PageTransitions.oneColumn(oldPanel, newPanel, callback);
+      }
+    };
+
     var _loadPanel = function ss_loadPanel(panelId, callback) {
       var panelElement = document.getElementById(panelId);
       if (panelElement.dataset.rendered) { // already initialized
@@ -42,7 +52,20 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
         return;
       }
       panelElement.dataset.rendered = true;
-      LazyLoader.load([panelElement], callback);
+
+      // XXX remove SubPanel loader once sub panel are modulized
+      if (panelElement.dataset.requireSubPanels) {
+        // load the panel and its sub-panels (dependencies)
+        // (load the main panel last because it contains the scripts)
+        var selector = 'section[id^="' + panelElement.id + '-"]';
+        var subPanels = document.querySelectorAll(selector);
+        for (var i = 0, il = subPanels.length; i < il; i++) {
+          LazyLoader.load([subPanels[i]]);
+        }
+        LazyLoader.load([panelElement], callback);
+      } else {
+        LazyLoader.load([panelElement], callback);
+      }
     };
 
     return {

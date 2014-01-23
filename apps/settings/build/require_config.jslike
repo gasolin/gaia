@@ -3,7 +3,6 @@
   baseUrl: 'js',
   mainConfigFile: '../js/config/require.js',
   dir: '../../../build_stage/settings',
-  name: 'main',
 
   findNestedDependencies: true,
 
