@@ -12,7 +12,9 @@ define(function() {
     oneColumn: function one_column(oldPanel, newPanel, callback) {
       var self = this;
       // switch previous/current classes
-      oldPanel.className = newPanel.className ? '' : 'previous';
+      if (oldPanel) {
+        oldPanel.className = newPanel.className ? '' : 'previous';
+      }
       newPanel.className = 'current';
 
       /**
@@ -32,13 +34,17 @@ define(function() {
 
         // We need to wait for the next tick otherwise gecko gets confused
         setTimeout(function nextTick() {
-          self._sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
+          if (oldPanel) {
+            self._sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
 
-          // Bug 818056 - When multiple visible panels are present,
-          // they are not painted correctly. This appears to fix the issue.
-          // Only do this after the first load
-          if (oldPanel.className === 'current')
-            return;
+            // Bug 818056 - When multiple visible panels are present,
+            // they are not painted correctly. This appears to fix the issue.
+            // Only do this after the first load
+            if (oldPanel.className === 'current')
+              return;
+          } else {
+            self._sendPanelReady(null, '#' + newPanel.id);
+          }
 
           if (callback)
             callback();
@@ -46,10 +52,14 @@ define(function() {
       });
     },
     twoColumn: function two_column(oldPanel, newPanel, callback) {
-      oldPanel.className = newPanel.className ? '' : 'previous';
-      newPanel.className = 'current';
-
-      this._sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
+      if (oldPanel) {
+        oldPanel.className = newPanel.className ? '' : 'previous';
+        newPanel.className = 'current';
+        this._sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
+      } else {
+        newPanel.className = 'current';
+        this._sendPanelReady(null, '#' + newPanel.id);
+      }
 
       if (callback) {
         callback();
