@@ -23,8 +23,9 @@ define(function() {
   // Invoke |callback| with a request object for a successful fetch of
   // settings values, when those values are ready.
   var _getSettings = function sc_getSettings(callback) {
-    if (!_settings)
+    if (!_settings) {
       return;
+    }
 
     if (_settingsCache && callback) {
       // Fast-path that we hope to always hit: our settings cache is
@@ -56,8 +57,9 @@ define(function() {
   };
 
   var _addEventListener = function sc_addEventListener(eventName, callback) {
-    if (eventName !== 'settingsChange')
+    if (eventName !== 'settingsChange') {
       return;
+    }
     var index = _callbacks.indexOf(callback);
     if (index === -1) {
       _callbacks.push(callback);
@@ -66,8 +68,9 @@ define(function() {
 
   var _removeEventListener =
     function sc_removeEventListsner(eventName, callback) {
-      if (eventName !== 'settingsChange')
+      if (eventName !== 'settingsChange') {
         return;
+      }
       var index = _callbacks.indexOf(callback);
       if (index !== -1) {
         _callbacks.splice(index, 1);

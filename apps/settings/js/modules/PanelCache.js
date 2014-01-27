@@ -38,8 +38,9 @@ define(['modules/SettingsPanel', 'LazyLoader'],
 
   return {
     get: function spc_get(panelId, callback) {
-      if (!callback)
+      if (!callback) {
         return;
+      }
 
       if (panelId !== 'root') {
         _loadPanelStylesheetsIfNeeded();

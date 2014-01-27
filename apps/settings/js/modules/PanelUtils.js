@@ -2,7 +2,8 @@
  * @fileoverview handle panel actions like
  * preset, activate, onLinkClick, onSettingsChange, onInputChange.
  */
-define(['modules/SettingsCache'], function(SettingsCache) {
+define(['modules/SettingsCache', 'LazyLoader'],
+  function(SettingsCache, LazyLoader) {
   'use strict';
   var _settings = navigator.mozSettings;
 
@@ -16,31 +17,31 @@ define(['modules/SettingsCache'], function(SettingsCache) {
     });
     LazyLoader.load(scripts_src);
 
+    var _onclick = function(callback, value) {
+      callback(value);
+      return false;
+    };
+
     // activate all links
-    var self = this;
     var rule = 'a[href^="http"], a[href^="tel"], [data-href]';
     var links = panel.querySelectorAll(rule);
-    for (var i = 0, il = links.length; i < il; i++) {
+    var i, count;
+
+    for (i = 0, count = links.length; i < count; i++) {
       var link = links[i];
       if (!link.dataset.href) {
         link.dataset.href = link.href;
         link.href = '#';
       }
       if (!link.dataset.href.startsWith('#')) { // external link
-        link.onclick = function() {
-          openLink(this.dataset.href);
-          return false;
-        };
+        link.onclick = _onclick.bind(this, this.openLink,
+                                     link.dataset.href);
       } else if (!link.dataset.href.endsWith('Settings')) { // generic dialog
-        link.onclick = function() {
-          openDialog(this.dataset.href.substr(1));
-          return false;
-        };
+        link.onclick = _onclick.bind(this, this.openDialog,
+                                     link.dataset.href.substr(1));
       } else { // Settings-specific dialog box
-        link.onclick = function() {
-          Settings.openDialog(this.dataset.href.substr(1));
-          return false;
-        };
+        link.onclick = _onclick.bind(this, Settings.openDialog,
+                                     link.dataset.href.substr(1));
       }
     }
   };
@@ -52,9 +53,10 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       // preset all checkboxes
       var rule = 'input[type="checkbox"]:not([data-ignore])';
       var checkboxes = panel.querySelectorAll(rule);
-      for (var i = 0; i < checkboxes.length; i++) {
-        var key = checkboxes[i].name;
-        if (key && result[key] != undefined) {
+      var i, count, key;
+      for (i = 0, count = checkboxes.length; i < count; i++) {
+        key = checkboxes[i].name;
+        if (key && result[key] !== undefined) {
           checkboxes[i].checked = !!result[key];
         }
       }
@@ -62,7 +64,7 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       // remove initial class so the swich animation will apply
       // on these toggles if user interact with it.
       setTimeout(function() {
-        for (var i = 0; i < checkboxes.length; i++) {
+        for (i = 0, count = checkboxes.length; i < count; i++) {
           if (checkboxes[i].classList.contains('initial')) {
             checkboxes[i].classList.remove('initial');
           }
@@ -72,9 +74,9 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       // preset all radio buttons
       rule = 'input[type="radio"]:not([data-ignore])';
       var radios = panel.querySelectorAll(rule);
-      for (i = 0; i < radios.length; i++) {
-        var key = radios[i].name;
-        if (key && result[key] != undefined) {
+      for (i = 0, count = radios.length; i < count; i++) {
+        key = radios[i].name;
+        if (key && result[key] !== undefined) {
           radios[i].checked = (result[key] === radios[i].value);
         }
       }
@@ -82,9 +84,9 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       // preset all text inputs
       rule = 'input[type="text"]:not([data-ignore])';
       var texts = panel.querySelectorAll(rule);
-      for (i = 0; i < texts.length; i++) {
-        var key = texts[i].name;
-        if (key && result[key] != undefined) {
+      for (i = 0, count = texts.length; i < count; i++) {
+        key = texts[i].name;
+        if (key && result[key] !== undefined) {
           texts[i].value = result[key];
         }
       }
@@ -92,19 +94,19 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       // preset all range inputs
       rule = 'input[type="range"]:not([data-ignore])';
       var ranges = panel.querySelectorAll(rule);
-      for (i = 0; i < ranges.length; i++) {
-        var key = ranges[i].name;
-        if (key && result[key] != undefined) {
+      for (i = 0, count = ranges.length; i < count; i++) {
+        key = ranges[i].name;
+        if (key && result[key] !== undefined) {
           ranges[i].value = parseFloat(result[key]);
         }
       }
 
       // preset all select
       var selects = panel.querySelectorAll('select');
-      for (var i = 0, count = selects.length; i < count; i++) {
+      for (i = 0, count = selects.length; i < count; i++) {
         var select = selects[i];
-        var key = select.name;
-        if (key && result[key] != undefined) {
+        key = select.name;
+        if (key && result[key] !== undefined) {
           var value = result[key];
           var option = 'option[value="' + value + '"]';
           var selectOption = select.querySelector(option);
@@ -117,8 +119,8 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       // preset all span with data-name fields
       rule = '[data-name]:not([data-ignore])';
       var spanFields = panel.querySelectorAll(rule);
-      for (i = 0; i < spanFields.length; i++) {
-        var key = spanFields[i].dataset.name;
+      for (i = 0, count = spanFields.length; i < count; i++) {
+        key = spanFields[i].dataset.name;
 
         //XXX intentionally checking for the string 'undefined', see bug 880617
         if (key && result[key] && result[key] != 'undefined') {
@@ -126,19 +128,19 @@ define(['modules/SettingsCache'], function(SettingsCache) {
           // (it may be in a different panel, so query the whole document)
           rule = '[data-setting="' + key + '"] ' +
             '[value="' + result[key] + '"]';
-          var option = document.querySelector(rule);
-          if (option) {
-            spanFields[i].dataset.l10nId = option.dataset.l10nId;
-            spanFields[i].textContent = option.textContent;
+          var option_span = document.querySelector(rule);
+          if (option_span) {
+            spanFields[i].dataset.l10nId = option_span.dataset.l10nId;
+            spanFields[i].textContent = option_span.textContent;
           } else {
             spanFields[i].textContent = result[key];
           }
         } else { // result[key] is undefined
+          var _ = navigator.mozL10n.get;
           switch (key) {
             //XXX bug 816899 will also provide 'deviceinfo.software' from
             // Gecko which is {os name + os version}
             case 'deviceinfo.software':
-              var _ = navigator.mozL10n.get;
               var text = _('brandShortName') + ' ' +
                 result['deviceinfo.os'];
               spanFields[i].textContent = text;
@@ -151,7 +153,6 @@ define(['modules/SettingsCache'], function(SettingsCache) {
               break;
 
             case 'deviceinfo.mac':
-              var _ = navigator.mozL10n.get;
               spanFields[i].textContent = _('macUnavailable');
               break;
           }
@@ -193,6 +194,7 @@ define(['modules/SettingsCache'], function(SettingsCache) {
   var _onSettingsChange = function panel_onSettingsChange(panel, event) {
     var key = event.settingName;
     var value = event.settingValue;
+    var i, count;
 
     // update <span> values when the corresponding setting is changed
     var rule = '[data-name="' + key + '"]:not([data-ignore])';
@@ -202,8 +204,7 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       var options = panel.querySelector('select[data-setting="' + key + '"]');
       if (options) {
         // iterate option matching
-        var max = options.length;
-        for (var i = 0; i < max; i++) {
+        for (i = 0, count = options.length; i < count; i++) {
           if (options[i] && options[i].value === value) {
             spanField.dataset.l10nId = options[i].dataset.l10nId;
             spanField.textContent = options[i].textContent;
@@ -216,23 +217,26 @@ define(['modules/SettingsCache'], function(SettingsCache) {
 
     // update <input> values when the corresponding setting is changed
     var input = panel.querySelector('input[name="' + key + '"]');
-    if (!input)
+    if (!input) {
       return;
+    }
 
     switch (input.type) {
       case 'checkbox':
       case 'switch':
-        if (input.checked == value)
+        if (input.checked == value) {
           return;
+        }
         input.checked = value;
         break;
       case 'range':
-        if (input.value == value)
+        if (input.value == value) {
           return;
+        }
         input.value = value;
         break;
       case 'select':
-        for (var i = 0; i < input.options.length; i++) {
+        for (i = 0, count = input.options.length; i < count; i++) {
           if (input.options[i].value == value) {
             input.options[i].selected = true;
             break;
@@ -248,14 +252,16 @@ define(['modules/SettingsCache'], function(SettingsCache) {
     var key = input.name;
 
     //XXX should we check data-ignore here?
-    if (!key || !_settings || event.type != 'change')
+    if (!key || !_settings || event.type != 'change') {
       return;
+    }
 
     // Not touching <input> with data-setting attribute here
     // because they would have to be committed with a explicit "submit"
     // of their own dialog.
-    if (input.dataset.setting)
+    if (input.dataset.setting) {
       return;
+    }
 
     var value;
     switch (type) {
@@ -276,8 +282,9 @@ define(['modules/SettingsCache'], function(SettingsCache) {
       case 'text':
       case 'password':
         value = input.value; // default as text
-        if (input.dataset.valueType === 'integer') // integer
+        if (input.dataset.valueType === 'integer') { // integer
           value = parseInt(value);
+        }
         break;
     }
 

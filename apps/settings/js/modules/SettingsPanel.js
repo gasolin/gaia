@@ -5,7 +5,6 @@ define(['modules/Panel', 'modules/SettingsCache', 'modules/PanelUtils',
         'LazyLoader'],
   function(Panel, SettingsCache, PanelUtils, LazyLoader) {
     'use strict';
-    var _settings = navigator.mozSettings;
     var _emptyFunc = function panel_emptyFunc() {};
     return function ctor_SettingsPanel(options) {
       var _panel = null;
@@ -17,8 +16,9 @@ define(['modules/Panel', 'modules/SettingsCache', 'modules/PanelUtils',
       };
 
       var _addListeners = function panel_addListeners(panel) {
-        if (!panel)
+        if (!panel) {
           return;
+        }
 
         SettingsCache.addEventListener('settingsChange',
           _settingsChangeHandler);
@@ -27,8 +27,9 @@ define(['modules/Panel', 'modules/SettingsCache', 'modules/PanelUtils',
       };
 
       var _removeListeners = function panel_removeListeners(panel) {
-        if (!panel)
+        if (!panel) {
           return;
+        }
 
         SettingsCache.removeEventListener('settingsChange',
           _settingsChangeHandler);

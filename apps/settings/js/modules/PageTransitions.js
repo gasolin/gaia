@@ -41,8 +41,9 @@ define(function() {
             // Bug 818056 - When multiple visible panels are present,
             // they are not painted correctly. This appears to fix the issue.
             // Only do this after the first load
-            if (oldPanel.className === 'current')
+            if (oldPanel.className === 'current') {
               return;
+            }
           } else {
             self._sendPanelReady(null, '#' + newPanel.id);
           }

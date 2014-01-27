@@ -19,15 +19,17 @@ define(function() {
           return _initialized;
         },
         init: function(panel, initOptions) {
-          if (_initialized)
+          if (_initialized) {
             return;
+          }
           _initialized = true;
 
           _onInit(panel, initOptions);
         },
         uninit: function() {
-          if (!_initialized)
+          if (!_initialized) {
             return;
+          }
           _initialized = false;
 
           _onUninit();
