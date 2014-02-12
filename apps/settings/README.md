@@ -19,22 +19,26 @@ The goal is to break the panel dependency. This should be done with breaking exi
 We are using [AMD](http://en.wikipedia.org/wiki/Asynchronous_module_definition) modules, loaded using 'Alemeda' (a lighter version of [RequireJS](http://requirejs.org)) and building/optimizing using ['r.js'](http://requirejs.org/docs/optimization.html) (the RequireJS optimizer). We have dependencies on files (`shared/js`)  which aren't AMD modules. For those we use the ['shim'](http://requirejs.org/docs/api.html#config-shim) options in our [`requirejs_config.js`](js/config/require.js)
 
 ## module/SettingsService.js
-`SettingsService` provides a navigate function for panel navigation. It gets the corresponding panel module from `PanelCache` and call to its ready and done functions when navigating (see the Panel section).
+`SettingsService` provides a navigate function for panel navigation. It gets the corresponding panel module from `PanelCache` and call to its show and hide functions when navigating (see the Panel section).
 
 ## module/PanelCache.js
 `PanelCache` loads panel modules based on panel IDs and caches the loaded modules. If there is no corresponding panel module, it returns `SettingsPanel`.
 
 ## module/Panel.js
-`Panel` defines four basic functions: ready, done, init, and uninit for navigation. These functions are called by `SettingsService` at the following stats:
-- ready:  called when the panel is navigated into the viewport
-- done:   called when the panel is navigated out of the viewport
-- init:   called at the first time the ready function gets called
-- uninit: called when cleanup
+`Panel` defines four basic functions: show, hide, init, and uninit for navigation. These functions are called by `SettingsService` at the following stats:
+- show:       called when the panel is navigated into the viewport
+- hide:       called when the panel is navigated out of the viewport
+- beforeShow: called when the panel is about to be navigated to into the viewport
+- beforeHide: called when the panel is about to be navigated out of the viewport
+- init:       called at the first time the beforeShow function gets called
+- uninit:     called when cleanup
 
-onReady, onDone, onInit, and onUninit are called respectively in the basic functions. The syntax of the functions are:
+onShow, onHide, onBeforeShow, onBeforeHide, onInit, and onUninit are called respectively in the basic functions. The syntax of the functions are:
 ```sh
-  function onReady(panelElement [, readyOptions])
-  function onDone()
+  function onShow(panelElement [, showOptions])
+  function onHide()
+  function onBeforeShow(panelElement [, beforeShowOptions])
+  function onBeforeHide()
   function onInit(panelElement [, initOptions])
   function onUninit()
 ```
@@ -42,19 +46,23 @@ onReady, onDone, onInit, and onUninit are called respectively in the basic funct
 We are able to override these functions by passing an option object into the constructor of `Panel`. For example,
 ```sh
   Panel({
-    onReady: function(panelElement, readyOptions) { //... }
-    onDone: function() { //... }
-    onInit: function(panelElement, initOptions) { //... }
+    onShow: function(panelElement, showOptions) { //... },
+    onHide: function() { //... },
+    onBeforeShow: function(panelElement, beforeShowOptions) { //... },
+    onBeforeHide: function() { //... },
+    onInit: function(panelElement, initOptions) { //... },
     onUninit: function() { //... }
   })
 ```
 
-Typically we can create DOM element references in onInit, update UI elements and add listeners in onReady, remove listeners in onDone, and do cleanup in onUninit.
+Typically we can create DOM element references in onInit, update UI elements and add listeners in onShow or onBeforeShow, remove listeners in onHide, and do cleanup in onUninit. The difference between onShow and onBeforeShow is that onBeforeShow is called before the transition, which makes updating the UI before displaying it to users possible. 
+
+Note that the transition happens right after onBeforeShow, please avoid heavy things in onBeforeShow and onBeforeHide, or it may drag down the performance of the transition.
 
 ## module/SettingsPanel.js
-`SettingsPanel` extends `Panel` with basic settings services. It presets the UI elements based on the values in mozSettings and add listeners responding to mozSettings changes in onReady. In onInit it parses the panel element for activating links. It also removes listeners in onDone so that we can avoid unwanted UI updates when the panel is outside of the viewport.
+`SettingsPanel` extends `Panel` with basic settings services. It presets the UI elements based on the values in mozSettings and add listeners responding to mozSettings changes in onBeforeShow. In onInit it parses the panel element for activating links. It also removes listeners in onHide so that we can avoid unwanted UI updates when the panel is outside of the viewport.
 
-As we are using require.js for module management, scripts used in a panel should be wrapped in an AMD module or loaded from it, and which should extends from `SettingsPanel` to have basic settings services. Similar to `Panel`, we are able override onReady, onDone, onInit, and onUninit by passing an option object to the constructor of `SettingsPanel`.
+As we are using require.js for module management, scripts used in a panel should be wrapped in an AMD module or loaded from it, and which should extends from `SettingsPanel` to have basic settings services. Similar to `Panel`, we are able override onShow, onHide, onBeforeShow, onBeforeHide, onInit, and onUninit by passing an option object to the constructor of `SettingsPanel`.
 
 ## Implement Guide
 ###How to create a new panel in Settings?
@@ -89,10 +97,10 @@ As we are using require.js for module management, scripts used in a panel should
         onUninit: function() {
           //...
         },
-        onReady: function(rootElement, readyOptions) {
+        onShow: function(rootElement, showOptions) {
           //...
         },
-        onDone: function() {
+        onHide: function() {
           //...
         }
       });

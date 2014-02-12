@@ -11,8 +11,10 @@ define(function() {
       options = options || {};
       var _onInit = options.onInit || _emptyFunc;
       var _onUninit = options.onUninit || _emptyFunc;
-      var _onReady = options.onReady || _emptyFunc;
-      var _onDone = options.onDone || _emptyFunc;
+      var _onShow = options.onShow || _emptyFunc;
+      var _onHide = options.onHide || _emptyFunc;
+      var _onBeforeShow = options.onBeforeShow || _emptyFunc;
+      var _onBeforeHide = options.onBeforeHide || _emptyFunc;
 
       return {
         get initialized() {
@@ -34,13 +36,18 @@ define(function() {
 
           _onUninit();
         },
-        ready: function(panel, readyOptions) {
-          this.init(panel, readyOptions);
-
-          _onReady(panel, readyOptions);
+        show: function(panel, showOptions) {
+          _onShow(panel, showOptions);
         },
-        done: function() {
-          _onDone();
+        hide: function() {
+          _onHide();
+        },
+        beforeShow: function(panel, beforeShowOptions) {
+          this.init(panel, beforeShowOptions);
+          _onBeforeShow(panel, beforeShowOptions);
+        },
+        beforeHide: function() {
+          _onBeforeHide();
         }
       };
     };

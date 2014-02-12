@@ -40,8 +40,9 @@ define(['modules/Panel', 'modules/SettingsCache', 'modules/PanelUtils',
       options = options || {};
       options.onInit = options.onInit || _emptyFunc;
       options.onUninit = options.onUninit || _emptyFunc;
-      options.onReady = options.onReady || _emptyFunc;
-      options.onDone = options.onDone || _emptyFunc;
+      options.onShow = options.onShow || _emptyFunc;
+      options.onHide = options.onHide || _emptyFunc;
+      options.onBeforeShow = options.onBeforeShow || _emptyFunc;
 
       return Panel({
         onInit: function(panel, initOptions) {
@@ -56,19 +57,22 @@ define(['modules/Panel', 'modules/SettingsCache', 'modules/PanelUtils',
 
           options.onUninit();
         },
-        onReady: function(panel, readyOptions) {
-          // Preset the panel every time when it is presented.
-          PanelUtils.preset(panel);
-          _addListeners(panel);
-
-          options.onReady(panel, readyOptions);
+        onShow: function(panel, showOptions) {
+          options.onShow(panel, showOptions);
         },
-        onDone: function() {
+        onHide: function() {
           // Remove listeners.
           _removeListeners(_panel);
 
-          options.onDone();
-        }
+          options.onHide();
+        },
+        onBeforeShow: function(panel, beforeShowOptions) {
+          // Preset the panel every time when it is presented.
+          PanelUtils.preset(panel);
+          _addListeners(panel);
+          options.onBeforeShow(panel, beforeShowOptions);
+        },
+        onBeforeHide: options.onBeforeHide
       });
     };
 });

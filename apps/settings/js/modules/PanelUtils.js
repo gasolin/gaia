@@ -1,3 +1,4 @@
+/* global openLink, openDialog */
 /**
  * @fileoverview handle panel actions like
  * preset, activate, onLinkClick, onSettingsChange, onInputChange.
@@ -34,10 +35,10 @@ define(['modules/SettingsCache', 'LazyLoader'],
         link.href = '#';
       }
       if (!link.dataset.href.startsWith('#')) { // external link
-        link.onclick = _onclick.bind(this, this.openLink,
+        link.onclick = _onclick.bind(this, openLink,
                                      link.dataset.href);
       } else if (!link.dataset.href.endsWith('Settings')) { // generic dialog
-        link.onclick = _onclick.bind(this, this.openDialog,
+        link.onclick = _onclick.bind(this, openDialog,
                                      link.dataset.href.substr(1));
       } else { // Settings-specific dialog box
         link.onclick = _onclick.bind(this, Settings.openDialog,

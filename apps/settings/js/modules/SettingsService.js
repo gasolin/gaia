@@ -15,23 +15,32 @@ define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
             _currentPanelId ? document.getElementById(_currentPanelId) : null;
 
         PanelCache.get(panelId, function(panel) {
-          // Prepare options and calls to the panel object's ready function.
+          // Prepare options and calls to the panel object's before
+          // show function.
           options = options || {};
-          // Update info
-          panel.ready(newPanelElement, options);
-
-          // Do transition
-          _transit(twoColumn, currentPanelElement, newPanelElement);
-
-          _currentPanelId = panelId;
+          panel.beforeShow(newPanelElement, options);
           if (_currentPanel) {
-            _currentPanel.done();
+            _currentPanel.beforeHide();
           }
-          _currentPanel = panel;
 
-          if (callback) {
-            callback();
-          }
+          // Add a timeout for smoother transition
+          setTimeout((function doTransition() {
+            // Do transition
+            _transit(twoColumn, currentPanelElement, newPanelElement,
+              (function transitionCompleted() {
+                panel.show(newPanelElement, options);
+                if (_currentPanel) {
+                  _currentPanel.hide();
+                }
+
+                _currentPanelId = panelId;
+                _currentPanel = panel;
+
+                if (callback) {
+                  callback();
+                }
+            }).bind(this));
+          }).bind(this));
         });
       });
     };
