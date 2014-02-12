@@ -41,7 +41,7 @@ define(['modules/settings_cache', 'shared/lazy_loader'],
         link.onclick = _onclick.bind(this, openDialog,
                                      link.dataset.href.substr(1));
       } else { // Settings-specific dialog box
-        link.onclick = _onclick.bind(this, Settings.openDialog,
+        link.onclick = _onclick.bind(this, _openDialog,
                                      link.dataset.href.substr(1));
       }
     }
@@ -302,6 +302,93 @@ define(['modules/settings_cache', 'shared/lazy_loader'],
 
     var cset = {}; cset[key] = value;
     _settings.createLock().set(cset);
+  };
+
+  var _openDialog = function panel_openDialog(dialogID) {
+    var dialog = document.getElementById(dialogID);
+    var fields = Array.prototype.slice.call(
+      dialog.querySelectorAll('[data-setting]:not([data-ignore])'));
+    var lock;
+
+    if (_settings) {
+      lock = _settings.createLock();
+    }
+
+    var updateInput = function(input) {
+      var key = input.dataset.setting;
+      var request = lock.get(key);
+
+      request.onsuccess = function() {
+        switch (input.type) {
+          case 'radio':
+            input.checked = (input.value == request.result[key]);
+            break;
+          case 'checkbox':
+            input.checked = request.result[key] || false;
+            break;
+          case 'select-one':
+            input.value = request.result[key] || '';
+            break;
+          default:
+            input.value = request.result[key] || '';
+            break;
+        }
+      };
+    };
+
+    /**
+     * In Settings dialog boxes, we don't want the input fields to be preset
+     * by Settings.init() and we don't want them to set the related settings
+     * without any user validation.
+     *
+     * So instead of assigning a `name' attribute to these inputs, a
+     * `data-setting' attribute is used and the input values are set
+     * explicitely when the dialog is shown.  If the dialog is validated
+     * (submit), their values are stored into B2G settings.
+     *
+     * XXX warning:
+     * this only supports text/password/radio/select/radio input types.
+     */
+
+    // initialize all setting fields in the dialog box
+    // XXX for fields being added by lazily loaded script,
+    // it would have to initialize the fields again themselves.
+    function reset() {
+      if (_settings) {
+        fields.forEach(updateInput);
+      }
+    }
+
+    // validate all settings in the dialog box
+    function submit() {
+      if (_settings) {
+        // Update the fields node list to include dynamically added fields
+        fields = Array.prototype.slice.call(
+          dialog.querySelectorAll('[data-setting]:not([data-ignore])'));
+        var cset = {}, key;
+
+        fields.forEach(function(input) {
+          key = input.dataset.setting;
+          switch (input.type) {
+            case 'radio':
+              if (input.checked) {
+                cset[key] = input.value;
+              }
+              break;
+            case 'checkbox':
+              cset[key] = input.checked;
+              break;
+            default:
+              cset[key] = input.value;
+              break;
+          }
+        });
+        lock.set(cset);
+      }
+    }
+
+    reset(); // preset all fields before opening the dialog
+    openDialog(dialogID, submit);
   };
 
   return {
