@@ -2,9 +2,9 @@ require(['config/require'], function() {
   'use strict';
 
   define('boot', function(require) {
-    var SettingsService = require('modules/SettingsService'),
-        SettingsCache = require('modules/SettingsCache'),
-        PageTransitions = require('modules/PageTransitions'),
+    var SettingsService = require('modules/settings_service'),
+        SettingsCache = require('modules/settings_cache'),
+        PageTransitions = require('modules/page_transitions'),
         Settings = require('settings');
 
     var options = {

@@ -1,7 +1,7 @@
 /**
  * @fileoverview navigate between panels.
  */
-define(['modules/PageTransitions', 'modules/PanelCache', 'LazyLoader'],
+define(['modules/page_transitions', 'modules/panel_cache', 'LazyLoader'],
   function(PageTransitions, PanelCache, LazyLoader) {
     'use strict';
     var _currentPanelId = null;

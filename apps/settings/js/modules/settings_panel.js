@@ -1,7 +1,7 @@
 /**
  * @fileoverview Settings panel class
  */
-define(['modules/Panel', 'modules/SettingsCache', 'modules/PanelUtils',
+define(['modules/panel', 'modules/settings_cache', 'modules/panel_utils',
         'LazyLoader'],
   function(Panel, SettingsCache, PanelUtils, LazyLoader) {
     'use strict';

@@ -2,7 +2,7 @@
  * @fileoverview initiate panel.
  * Cache panel and resources for reuse.
  */
-define(['modules/SettingsPanel', 'LazyLoader'],
+define(['modules/settings_panel', 'LazyLoader'],
   function(SettingsPanel, LazyLoader) {
   'use strict';
   var _panelCache = {};
