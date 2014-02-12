@@ -2,13 +2,13 @@ require.config({
   baseUrl: '/js',
   paths: {
     'modules': 'modules',
-    'LazyLoader': '../shared/js/lazy_loader'
+    'shared': '../shared/js'
   },
   shim: {
     'settings': {
       exports: 'Settings'
     },
-    'LazyLoader': {
+    'shared/lazy_loader': {
       exports: 'LazyLoader'
     }
   },

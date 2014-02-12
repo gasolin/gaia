@@ -3,7 +3,7 @@
  * @fileoverview handle panel actions like
  * preset, activate, onLinkClick, onSettingsChange, onInputChange.
  */
-define(['modules/settings_cache', 'LazyLoader'],
+define(['modules/settings_cache', 'shared/lazy_loader'],
   function(SettingsCache, LazyLoader) {
   'use strict';
   var _settings = navigator.mozSettings;

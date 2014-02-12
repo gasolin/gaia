@@ -2,7 +2,7 @@
  * @fileoverview Settings panel class
  */
 define(['modules/panel', 'modules/settings_cache', 'modules/panel_utils',
-        'LazyLoader'],
+        'shared/lazy_loader'],
   function(Panel, SettingsCache, PanelUtils, LazyLoader) {
     'use strict';
     var _emptyFunc = function panel_emptyFunc() {};
