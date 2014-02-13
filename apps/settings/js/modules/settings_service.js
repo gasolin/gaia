@@ -7,9 +7,19 @@ define(['modules/page_transitions', 'modules/panel_cache',
     'use strict';
     var _currentPanelId = null;
     var _currentPanel = null;
+    var _navigating = false;
 
     var _navigate = function ss_navigate(twoColumn,
       panelId, options, callback) {
+      // Ignore the navigation request if it is navigating
+      if (_navigating) {
+        if (callback) {
+          callback(false);
+        }
+        return;
+      }
+
+      _navigating = true;
       _loadPanel(panelId, function() {
         var newPanelElement = document.getElementById(panelId);
         var currentPanelElement =
@@ -38,8 +48,9 @@ define(['modules/page_transitions', 'modules/panel_cache',
                 _currentPanel = panel;
 
                 if (callback) {
-                  callback();
+                  callback(true);
                 }
+                _navigating = false;
             }).bind(this));
           }).bind(this));
         });

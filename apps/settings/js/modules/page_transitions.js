@@ -16,6 +16,13 @@ define(function() {
       if (oldPanel) {
         oldPanel.className = newPanel.className ? '' : 'previous';
       }
+      if (newPanel.className === 'current') {
+        if (callback) {
+          callback();
+        }
+        return;
+      }
+
       newPanel.className = 'current';
 
       /**
