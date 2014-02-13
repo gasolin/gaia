@@ -1,13 +1,13 @@
 # Settings
 
 - Allows the user to configure device settings
-- Responds to **incoming activities** ('configure'), which allow the user to navigate to specific panel to configue from another app (eg. show the wifi settings panel if no data connection is available).
+- Responds to **incoming activities** ('configure'), which allows the user to navigate to a specific panel to configure from another app (eg. show the wifi settings panel if no data connection is available).
 
-## Current Stat
+## Current Status
 
 Currently basic settings services (mozSettings/UI bindings, panel navigation...) used by all panels and root panel specific logic were mixed and defined in a few modules (Settings, Connectivity). 
 
-The goal is to break the panel dependency. This should be done with breaking existing modules into smaller ones, which enables each panel to load only the necessary codes. And new panels should follow the new code structure so we will achieve:
+The goal is to break the panel dependency. This should be done by breaking existing modules into smaller ones, which enables each panel to load only the necessary codes. And new panels should follow the new code structure so we will achieve:
 
 1. Module separation
 2. Panel separation
@@ -18,14 +18,14 @@ The goal is to break the panel dependency. This should be done with breaking exi
 
 We are using [AMD](http://en.wikipedia.org/wiki/Asynchronous_module_definition) modules, loaded using 'Alemeda' (a lighter version of [RequireJS](http://requirejs.org)) and building/optimizing using ['r.js'](http://requirejs.org/docs/optimization.html) (the RequireJS optimizer). We have dependencies on files (`shared/js`)  which aren't AMD modules. For those we use the ['shim'](http://requirejs.org/docs/api.html#config-shim) options in our [`requirejs_config.js`](js/config/require.js)
 
-## module/SettingsService.js
-`SettingsService` provides a navigate function for panel navigation. It gets the corresponding panel module from `PanelCache` and call to its show and hide functions when navigating (see the Panel section).
+## module/settings_service.js
+`SettingsService` provides a navigate function for panel navigation. It gets the corresponding panel module from `PanelCache` and call to its show and hide functions when navigating (see the module/panel.js section).
 
-## module/PanelCache.js
+## module/panel_cache.js
 `PanelCache` loads panel modules based on panel IDs and caches the loaded modules. If there is no corresponding panel module, it returns `SettingsPanel`.
 
-## module/Panel.js
-`Panel` defines four basic functions: show, hide, init, and uninit for navigation. These functions are called by `SettingsService` at the following stats:
+## module/panel.js
+`Panel` defines Six basic functions: show, hide, beforeShow, beforeHide, init, and uninit for navigation. These functions are called by `SettingsService` during the navigation.
 - show:       called when the panel is navigated into the viewport
 - hide:       called when the panel is navigated out of the viewport
 - beforeShow: called when the panel is about to be navigated to into the viewport
@@ -59,7 +59,7 @@ Typically we can create DOM element references in onInit, update UI elements and
 
 Note that the transition happens right after onBeforeShow, please avoid heavy things in onBeforeShow and onBeforeHide, or it may drag down the performance of the transition.
 
-## module/SettingsPanel.js
+## module/settings_panel.js
 `SettingsPanel` extends `Panel` with basic settings services. It presets the UI elements based on the values in mozSettings and add listeners responding to mozSettings changes in onBeforeShow. In onInit it parses the panel element for activating links. It also removes listeners in onHide so that we can avoid unwanted UI updates when the panel is outside of the viewport.
 
 As we are using require.js for module management, scripts used in a panel should be wrapped in an AMD module or loaded from it, and which should extends from `SettingsPanel` to have basic settings services. Similar to `Panel`, we are able override onShow, onHide, onBeforeShow, onBeforeHide, onInit, and onUninit by passing an option object to the constructor of `SettingsPanel`.
