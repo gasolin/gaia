@@ -1,6 +1,8 @@
 /**
- * @fileoverview initiate panel.
- * Cache panel and resources for reuse.
+ * PanelCache is a singleton that loads a panel module based on the panel id
+ * and caches the loaded modules. 
+ *
+ * @module PanelCache
  */
 define(['modules/settings_panel', 'shared/lazy_loader'],
   function(SettingsPanel, LazyLoader) {
@@ -37,6 +39,16 @@ define(['modules/settings_panel', 'shared/lazy_loader'],
   });
 
   return {
+    /**
+     * Get the panel module of a specified id. If there is no corresponding
+     * panel module of the id, it returns SettingsPanel.
+     *
+     * @alias module:PanelCache#get
+     * @param {String} panelId
+     *                 The id of the to be loaded panel.
+     * @param {Function} callback
+     *                   The function to be called when the panel is loaded.
+     */
     get: function spc_get(panelId, callback) {
       if (!callback) {
         return;

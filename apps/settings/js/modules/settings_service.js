@@ -1,5 +1,9 @@
 /**
- * @fileoverview navigate between panels.
+ * SettingsService is a singleton that provides a navigation service. It
+ * gets the corresponding panel module from PanelCache and call to its basic
+ * functions when navigating.
+ *
+ * @module SettingsService
  */
 define(['modules/page_transitions', 'modules/panel_cache',
         'shared/lazy_loader'],
@@ -8,54 +12,6 @@ define(['modules/page_transitions', 'modules/panel_cache',
     var _currentPanelId = null;
     var _currentPanel = null;
     var _navigating = false;
-
-    var _navigate = function ss_navigate(twoColumn,
-      panelId, options, callback) {
-      // Ignore the navigation request if it is navigating
-      if (_navigating) {
-        if (callback) {
-          callback(false);
-        }
-        return;
-      }
-
-      _navigating = true;
-      _loadPanel(panelId, function() {
-        var newPanelElement = document.getElementById(panelId);
-        var currentPanelElement =
-            _currentPanelId ? document.getElementById(_currentPanelId) : null;
-
-        PanelCache.get(panelId, function(panel) {
-          // Prepare options and calls to the panel object's before
-          // show function.
-          options = options || {};
-          panel.beforeShow(newPanelElement, options);
-          if (_currentPanel) {
-            _currentPanel.beforeHide();
-          }
-
-          // Add a timeout for smoother transition
-          setTimeout((function doTransition() {
-            // Do transition
-            _transit(twoColumn, currentPanelElement, newPanelElement,
-              (function transitionCompleted() {
-                panel.show(newPanelElement, options);
-                if (_currentPanel) {
-                  _currentPanel.hide();
-                }
-
-                _currentPanelId = panelId;
-                _currentPanel = panel;
-
-                if (callback) {
-                  callback(true);
-                }
-                _navigating = false;
-            }).bind(this));
-          }).bind(this));
-        });
-      });
-    };
 
     var _transit = function ss_transit(twoColumn,
       oldPanel, newPanel, callback) {
@@ -90,6 +46,62 @@ define(['modules/page_transitions', 'modules/panel_cache',
     };
 
     return {
-      navigate: _navigate
+      /**
+       * Navigate to a panel with options.
+       *
+       * @alias module:SettingsService#navigate
+       * @param {Boolean} twoColumn
+       *                  Specifies if we are using two column mode. (This
+       *                  should be removed)
+       * @param {String} panelId
+       * @param {Object} options
+       * @param {Function} callback
+       */
+      navigate: function ss_navigate(twoColumn, panelId, options, callback) {
+        // Ignore the navigation request if it is navigating
+        if (_navigating) {
+          if (callback) {
+            callback(false);
+          }
+          return;
+        }
+
+        _navigating = true;
+        _loadPanel(panelId, function() {
+          var newPanelElement = document.getElementById(panelId);
+          var currentPanelElement =
+              _currentPanelId ? document.getElementById(_currentPanelId) : null;
+
+          PanelCache.get(panelId, function(panel) {
+            // Prepare options and calls to the panel object's before
+            // show function.
+            options = options || {};
+            panel.beforeShow(newPanelElement, options);
+            if (_currentPanel) {
+              _currentPanel.beforeHide();
+            }
+
+            // Add a timeout for smoother transition
+            setTimeout((function doTransition() {
+              // Do transition
+              _transit(twoColumn, currentPanelElement, newPanelElement,
+                (function transitionCompleted() {
+                  panel.show(newPanelElement, options);
+                  if (_currentPanel) {
+                    _currentPanel.hide();
+                  }
+
+                  _currentPanelId = panelId;
+                  _currentPanel = panel;
+
+                  if (callback) {
+                    callback(true);
+                  }
+                  _navigating = false;
+              }).bind(this));
+            }).bind(this));
+          });
+        });
+      }
     };
 });

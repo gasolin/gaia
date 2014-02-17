@@ -30,10 +30,10 @@ We are using [AMD](http://en.wikipedia.org/wiki/Asynchronous_module_definition) 
 - hide:       called when the panel is navigated out of the viewport
 - beforeShow: called when the panel is about to be navigated to into the viewport
 - beforeHide: called when the panel is about to be navigated out of the viewport
-- init:       called at the first time the beforeShow function gets called
+- init:       called at the first time when the beforeShow function gets called
 - uninit:     called when cleanup
 
-onShow, onHide, onBeforeShow, onBeforeHide, onInit, and onUninit are called respectively in the basic functions. The syntax of the functions are:
+The internal functions, _onShow, _onHide, _onBeforeShow, _onBeforeHide, _onInit, and _onUninit, are called respectively in the basic functions. The syntax of the functions are:
 ```sh
   function onShow(panelElement [, showOptions])
   function onHide()
@@ -43,7 +43,7 @@ onShow, onHide, onBeforeShow, onBeforeHide, onInit, and onUninit are called resp
   function onUninit()
 ```
 
-We are able to override these functions by passing an option object into the constructor of `Panel`. For example,
+We are able to override the internal functions by passing an option object into the constructor of `Panel`. For example,
 ```sh
   Panel({
     onShow: function(panelElement, showOptions) { //... },

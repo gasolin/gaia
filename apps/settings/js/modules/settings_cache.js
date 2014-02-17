@@ -1,3 +1,9 @@
+/**
+ * SettingsCache is a singleton that caches mozSettings values for fast
+ * access.
+ *
+ * @module SettingsCache
+ */
 define(function() {
   'use strict';
   var _settings = window.navigator.mozSettings;
@@ -20,63 +26,6 @@ define(function() {
 
   var _callbacks = [];
 
-  // Invoke |callback| with a request object for a successful fetch of
-  // settings values, when those values are ready.
-  var _getSettings = function sc_getSettings(callback) {
-    if (!_settings) {
-      return;
-    }
-
-    if (_settingsCache && callback) {
-      // Fast-path that we hope to always hit: our settings cache is
-      // already available, so invoke the callback now.
-      callback(_settingsCache);
-      return;
-    }
-
-    if (!_settingsCacheRequestSent && !_settingsCache) {
-      _settingsCacheRequestSent = true;
-      var lock = _settings.createLock();
-      var request = lock.get('*');
-      request.onsuccess = function(e) {
-        var result = request.result;
-        var cachedResult = {};
-        for (var attr in result) {
-          cachedResult[attr] = result[attr];
-        }
-        _settingsCache = cachedResult;
-        var cbk;
-        while ((cbk = _pendingSettingsCallbacks.pop())) {
-          cbk(result);
-        }
-      };
-    }
-    if (callback) {
-      _pendingSettingsCallbacks.push(callback);
-    }
-  };
-
-  var _addEventListener = function sc_addEventListener(eventName, callback) {
-    if (eventName !== 'settingsChange') {
-      return;
-    }
-    var index = _callbacks.indexOf(callback);
-    if (index === -1) {
-      _callbacks.push(callback);
-    }
-  };
-
-  var _removeEventListener =
-    function sc_removeEventListsner(eventName, callback) {
-      if (eventName !== 'settingsChange') {
-        return;
-      }
-      var index = _callbacks.indexOf(callback);
-      if (index !== -1) {
-        _callbacks.splice(index, 1);
-      }
-  };
-
   _settings.onsettingchange = function sc_onSettingsChange(event) {
     var key = event.settingName;
     var value = event.settingValue;
@@ -92,16 +41,92 @@ define(function() {
     });
   };
 
-  // Make a request for settings to warm the cache, since we need it
-  // very soon in startup after the DOM is available.
-  _getSettings(null);
-
-  return {
+  /**
+   * Event reporting that a setting value is changed.
+   *
+   * @event module:SettingsCache#settingsChange
+   * @property {MozSettingsEvent} event
+   */
+  var SettingsCache = {
     get cache() {
       return _settingsCache;
     },
-    getSettings: _getSettings,
-    addEventListener: _addEventListener,
-    removeEventListener: _removeEventListener
+
+    /**
+     * Where callback is a function to be called with a request object for a
+     * successful fetch of settings values, when those values are ready.
+     *
+     * @alias module:SettingsCache#getSettings
+     * @param {Function} callback
+     */
+    getSettings: function sc_getSettings(callback) {
+      if (!_settings) {
+        return;
+      }
+
+      if (_settingsCache && callback) {
+        // Fast-path that we hope to always hit: our settings cache is
+        // already available, so invoke the callback now.
+        callback(_settingsCache);
+        return;
+      }
+
+      if (!_settingsCacheRequestSent && !_settingsCache) {
+        _settingsCacheRequestSent = true;
+        var lock = _settings.createLock();
+        var request = lock.get('*');
+        request.onsuccess = function(e) {
+          var result = request.result;
+          var cachedResult = {};
+          for (var attr in result) {
+            cachedResult[attr] = result[attr];
+          }
+          _settingsCache = cachedResult;
+          var cbk;
+          while ((cbk = _pendingSettingsCallbacks.pop())) {
+            cbk(result);
+          }
+        };
+      }
+      if (callback) {
+        _pendingSettingsCallbacks.push(callback);
+      }
+    },
+
+    /**
+     * @alias module:SettingsCache#addEventListener
+     * @param {String} eventName
+     * @param {Function} callback
+     */
+    addEventListener: function sc_addEventListener(eventName, callback) {
+      if (eventName !== 'settingsChange') {
+        return;
+      }
+      var index = _callbacks.indexOf(callback);
+      if (index === -1) {
+        _callbacks.push(callback);
+      }
+    },
+
+    /**
+     * @alias module:SettingsCache#removeEventListener
+     * @param {String} eventName
+     * @param {Function} callback
+     */
+    removeEventListener: function sc_removeEventListsner(eventName, callback) {
+      if (eventName !== 'settingsChange') {
+        return;
+      }
+      var index = _callbacks.indexOf(callback);
+      if (index !== -1) {
+        _callbacks.splice(index, 1);
+      }
+    }
   };
+
+  // Make a request for settings to warm the cache, since we need it
+  // very soon in startup after the DOM is available.
+  SettingsCache.getSettings(null);
+
+  return SettingsCache;
 });

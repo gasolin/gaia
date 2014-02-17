@@ -1,17 +1,30 @@
+/**
+ * PageTransitions provides transition functions used when navigating panels.
+ *
+ * @module PageTransitions
+ */
 define(function() {
   'use strict';
+
+  var _sendPanelReady = function _send_panel_ready(oldPanelHash, newPanelHash) {
+    var detail = {
+      previous: oldPanelHash,
+      current: newPanelHash
+    };
+    var event = new CustomEvent('panelready', {detail: detail});
+    window.dispatchEvent(event);
+  };
+
   return {
-    _sendPanelReady: function _send_panel_ready(oldPanelHash, newPanelHash) {
-      var detail = {
-        previous: oldPanelHash,
-        current: newPanelHash
-      };
-      var event = new CustomEvent('panelready', {detail: detail});
-      window.dispatchEvent(event);
-    },
-    /** phone size device layout */
-    oneColumn: function one_column(oldPanel, newPanel, callback) {
-      var self = this;
+    /**
+     * Typically used with phone size device layouts.
+     *
+     * @alias module:PageTransitions#oneColumn
+     * @param {String} oldPanel
+     * @param {String} newPanel
+     * @param {Function} callback
+     */
+    oneColumn: function pt_one_column(oldPanel, newPanel, callback) {
       // switch previous/current classes
       if (oldPanel) {
         oldPanel.className = newPanel.className ? '' : 'previous';
@@ -43,7 +56,7 @@ define(function() {
         // We need to wait for the next tick otherwise gecko gets confused
         setTimeout(function nextTick() {
           if (oldPanel) {
-            self._sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
+            _sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
 
             // Bug 818056 - When multiple visible panels are present,
             // they are not painted correctly. This appears to fix the issue.
@@ -52,7 +65,7 @@ define(function() {
               return;
             }
           } else {
-            self._sendPanelReady(null, '#' + newPanel.id);
+            _sendPanelReady(null, '#' + newPanel.id);
           }
 
           if (callback) {
@@ -61,15 +74,23 @@ define(function() {
         });
       });
     },
-    /** tablet size device layout */
-    twoColumn: function two_column(oldPanel, newPanel, callback) {
+
+    /**
+     * Typically used with tablet size device layouts.
+     *
+     * @alias module:PageTransitions#twoColumn
+     * @param {String} oldPanel
+     * @param {String} newPanel
+     * @param {Function} callback
+     */
+    twoColumn: function pt_two_column(oldPanel, newPanel, callback) {
       if (oldPanel) {
         oldPanel.className = newPanel.className ? '' : 'previous';
         newPanel.className = 'current';
-        this._sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
+        _sendPanelReady('#' + oldPanel.id, '#' + newPanel.id);
       } else {
         newPanel.className = 'current';
-        this._sendPanelReady(null, '#' + newPanel.id);
+        _sendPanelReady(null, '#' + newPanel.id);
       }
 
       if (callback) {
