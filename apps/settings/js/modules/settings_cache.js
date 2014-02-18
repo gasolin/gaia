@@ -26,21 +26,23 @@ define(function() {
 
   var _callbacks = [];
 
+  var _onSettingsChange = function sc_onSettingsChange(event) {
+    var key = event.settingName;
+    var value = event.settingValue;
+
+    // Always update the cache if it's present, even if the DOM
+    // isn't loaded yet.
+    if (_settingsCache) {
+      _settingsCache[key] = value;
+    }
+
+    _callbacks.forEach(function(callback) {
+      callback(event);
+    });
+  };
+
   if (_settings) {
-    _settings.onsettingchange = function sc_onSettingsChange(event) {
-      var key = event.settingName;
-      var value = event.settingValue;
-
-      // Always update the cache if it's present, even if the DOM
-      // isn't loaded yet.
-      if (_settingsCache) {
-        _settingsCache[key] = value;
-      }
-
-      _callbacks.forEach(function(callback) {
-        callback(event);
-      });
-    };
+    _settings.onsettingchange = _onSettingsChange;
   }
 
   /**
@@ -50,7 +52,12 @@ define(function() {
    * @property {MozSettingsEvent} event
    */
   var SettingsCache = {
+    // the reset function is for unit tests
     reset: function sc_reset() {
+      _settings = window.navigator.mozSettings;
+      if (_settings) {
+        _settings.onsettingchange = _onSettingsChange;
+      }
       _settingsCache = null;
       _settingsCacheRequestSent = null;
       _pendingSettingsCallbacks = [];

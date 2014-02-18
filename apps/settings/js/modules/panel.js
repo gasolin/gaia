@@ -79,6 +79,8 @@ define(function() {
          * @param {Object} showOptions
          */
         show: function(panel, showOptions) {
+          // Initialize at the first call to show if necessary.
+          this.init(panel, showOptions);
           _onShow(panel, showOptions);
         },
 
@@ -99,7 +101,7 @@ define(function() {
          * @param {Object} beforeShowOptions
          */
         beforeShow: function(panel, beforeShowOptions) {
-          // Initialize at first before show.
+          // Initialize at the first call to beforeShow.
           this.init(panel, beforeShowOptions);
           _onBeforeShow(panel, beforeShowOptions);
         },
