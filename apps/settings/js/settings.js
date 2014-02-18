@@ -16,7 +16,7 @@ var Settings = {
   },
 
   isTabletAndLandscape: function is_tablet_and_landscape() {
-    return ScreenLayout.getCurrentLayout('tabletAndLandscaped');
+    return this.ScreenLayout.getCurrentLayout('tabletAndLandscaped');
   },
 
   _panelsWithClass: function pane_with_class(targetClass) {
@@ -42,14 +42,6 @@ var Settings = {
       }
     }
     Settings._isTabletAndLandscapeLastTime = isTabletAndLandscapeThisTime;
-  },
-
-  _transit: function transit(oldPanel, newPanel, callback) {
-    if (this.isTabletAndLandscape()) {
-      this.PageTransitions.twoColumn(oldPanel, newPanel, callback);
-    } else {
-      this.PageTransitions.oneColumn(oldPanel, newPanel, callback);
-    }
   },
 
   defaultPanelForTablet: '#wifi',
@@ -89,8 +81,7 @@ var Settings = {
     if (panelID.startsWith('#')) {
       panelID = panelID.substring(1);
     }
-    this.SettingsService.navigate(this.isTabletAndLandscape(), panelID, null,
-      function() {
+    this.SettingsService.navigate(panelID, null, function() {
       self._currentPanel = hash;
 
       switch (hash) {
@@ -118,17 +109,19 @@ var Settings = {
     this.SettingsService = options.SettingsService;
     this.SettingsCache = options.SettingsCache;
     this.PageTransitions = options.PageTransitions;
+    this.LazyLoader = options.LazyLoader;
+    this.ScreenLayout = options.ScreenLayout;
 
-    setTimeout(function nextTick() {
-      LazyLoader.load(['js/utils.js'], startupLocale);
+    setTimeout((function nextTick() {
+      this.LazyLoader.load(['js/utils.js'], startupLocale);
 
-      LazyLoader.load(['shared/js/wifi_helper.js'], displayDefaultPanel);
+      this.LazyLoader.load(['shared/js/wifi_helper.js'], displayDefaultPanel);
 
       /**
        * Enable or disable the menu items related to the ICC card relying on the
        * card and radio state.
        */
-      LazyLoader.load([
+      this.LazyLoader.load([
         'shared/js/airplane_mode_helper.js',
         'js/airplane_mode.js',
         'js/battery.js',
@@ -149,14 +142,14 @@ var Settings = {
       ], function() {
         TelephonySettingHelper.init();
       });
-    });
+    }).bind(this));
 
     function displayDefaultPanel() {
       // With async pan zoom enable, the page starts with a viewport
       // of 980px before beeing resize to device-width. So let's delay
       // the rotation listener to make sure it is not triggered by fake
       // positive.
-      ScreenLayout.watch(
+      Settings.ScreenLayout.watch(
         'tabletAndLandscaped',
         '(min-width: 768px) and (orientation: landscape)');
       window.addEventListener('screenlayoutchange', Settings.rotate);

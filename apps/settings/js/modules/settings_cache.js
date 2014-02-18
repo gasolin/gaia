@@ -26,20 +26,22 @@ define(function() {
 
   var _callbacks = [];
 
-  _settings.onsettingchange = function sc_onSettingsChange(event) {
-    var key = event.settingName;
-    var value = event.settingValue;
+  if (_settings) {
+    _settings.onsettingchange = function sc_onSettingsChange(event) {
+      var key = event.settingName;
+      var value = event.settingValue;
 
-    // Always update the cache if it's present, even if the DOM
-    // isn't loaded yet.
-    if (_settingsCache) {
-      _settingsCache[key] = value;
-    }
+      // Always update the cache if it's present, even if the DOM
+      // isn't loaded yet.
+      if (_settingsCache) {
+        _settingsCache[key] = value;
+      }
 
-    _callbacks.forEach(function(callback) {
-      callback(event);
-    });
-  };
+      _callbacks.forEach(function(callback) {
+        callback(event);
+      });
+    };
+  }
 
   /**
    * Event reporting that a setting value is changed.
@@ -48,6 +50,13 @@ define(function() {
    * @property {MozSettingsEvent} event
    */
   var SettingsCache = {
+    reset: function sc_reset() {
+      _settingsCache = null;
+      _settingsCacheRequestSent = null;
+      _pendingSettingsCallbacks = [];
+      _callbacks = [];
+    },
+
     get cache() {
       return _settingsCache;
     },

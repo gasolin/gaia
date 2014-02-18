@@ -28,7 +28,7 @@ We are using [AMD](http://en.wikipedia.org/wiki/Asynchronous_module_definition) 
 `Panel` defines Six basic functions: show, hide, beforeShow, beforeHide, init, and uninit for navigation. These functions are called by `SettingsService` during the navigation.
 - show:       called when the panel is navigated into the viewport
 - hide:       called when the panel is navigated out of the viewport
-- beforeShow: called when the panel is about to be navigated to into the viewport
+- beforeShow: called when the panel is about to be navigated into the viewport
 - beforeHide: called when the panel is about to be navigated out of the viewport
 - init:       called at the first time when the beforeShow function gets called
 - uninit:     called when cleanup

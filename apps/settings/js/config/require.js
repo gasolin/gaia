@@ -10,6 +10,9 @@ require.config({
     },
     'shared/lazy_loader': {
       exports: 'LazyLoader'
+    },
+    'shared/screen_layout': {
+      exports: 'ScreenLayout'
     }
   },
   modules: [

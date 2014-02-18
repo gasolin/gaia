@@ -1,21 +1,29 @@
 /**
- * SettingsService is a singleton that provides a navigation service. It
+ * SettingsService is a singleton that provides the navigation service. It
  * gets the corresponding panel module from PanelCache and call to its basic
  * functions when navigating.
  *
  * @module SettingsService
  */
 define(['modules/page_transitions', 'modules/panel_cache',
-        'shared/lazy_loader'],
-  function(PageTransitions, PanelCache, LazyLoader) {
+        'shared/screen_layout', 'shared/lazy_loader'],
+  function(PageTransitions, PanelCache, ScreenLayout, LazyLoader) {
     'use strict';
+
+    var _rootPanelId = null;
+
     var _currentPanelId = null;
     var _currentPanel = null;
     var _navigating = false;
 
-    var _transit = function ss_transit(twoColumn,
-      oldPanel, newPanel, callback) {
-      if (twoColumn) {
+    var _pendingNavigation = null;
+
+    var _isTabletAndLandscape = function ss_is_tablet_and_landscape() {
+      return ScreenLayout.getCurrentLayout('tabletAndLandscaped');
+    };
+
+    var _transit = function ss_transit(oldPanel, newPanel, callback) {
+      if (_isTabletAndLandscape()) {
         PageTransitions.twoColumn(oldPanel, newPanel, callback);
       } else {
         PageTransitions.oneColumn(oldPanel, newPanel, callback);
@@ -45,63 +53,93 @@ define(['modules/page_transitions', 'modules/panel_cache',
       }
     };
 
+    var _navigate = function ss_navigate(panelId, options, callback) {
+      _loadPanel(panelId, function() {
+        PanelCache.get(panelId, function(panel) {
+          // Check if there is any pending navigation.
+          if (_pendingNavigation) {
+            callback();
+            return;
+          }
+
+          var newPanelElement = document.getElementById(panelId);
+          var currentPanelElement =
+            _currentPanelId ? document.getElementById(_currentPanelId) : null;
+          // Prepare options and calls to the panel object's before
+          // show function.
+          options = options || {};
+
+          panel.beforeShow(newPanelElement, options);
+          // We don't deactivate the root panel.
+          if (_currentPanel && _currentPanelId !== _rootPanelId) {
+            _currentPanel.beforeHide();
+          }
+
+          // Add a timeout for smoother transition.
+          setTimeout(function doTransition() {
+            _transit(currentPanelElement, newPanelElement,
+              function transitionCompleted() {
+                panel.show(newPanelElement, options);
+                // We don't deactivate the root panel.
+                if (_currentPanel && _currentPanelId !== _rootPanelId) {
+                  _currentPanel.hide();
+                }
+
+                _currentPanelId = panelId;
+                _currentPanel = panel;
+
+                callback();
+            });
+          });
+        });
+      });
+    };
+
     return {
       /**
-       * Navigate to a panel with options.
+       * Init SettingsService.
+       *
+       * @alias module:SettingsService#init
+       * @param {String} rootPanelId
+       *                 Panel with the specified id is assumed to be be kept on
+       *                 on the screen always. We don't call to its hide and
+       *                 beforeHide functions.
+       */
+      init: function ss_init(rootPanelId) {
+        _rootPanelId = rootPanelId;
+      },
+
+      /**
+       * Navigate to a panel with options. The navigation transition is
+       * determined based on the current screen size and orientation.
        *
        * @alias module:SettingsService#navigate
-       * @param {Boolean} twoColumn
-       *                  Specifies if we are using two column mode. (This
-       *                  should be removed)
        * @param {String} panelId
        * @param {Object} options
        * @param {Function} callback
        */
-      navigate: function ss_navigate(twoColumn, panelId, options, callback) {
-        // Ignore the navigation request if it is navigating
+      navigate: function ss_navigate(panelId, options, callback) {
+        // Cache the navigation request if it is navigating.
         if (_navigating) {
-          if (callback) {
-            callback(false);
-          }
+          _pendingNavigation = arguments;
           return;
         }
 
         _navigating = true;
-        _loadPanel(panelId, function() {
-          var newPanelElement = document.getElementById(panelId);
-          var currentPanelElement =
-              _currentPanelId ? document.getElementById(_currentPanelId) : null;
+        _navigate(panelId, options, (function() {
+          _navigating = false;
 
-          PanelCache.get(panelId, function(panel) {
-            // Prepare options and calls to the panel object's before
-            // show function.
-            options = options || {};
-            panel.beforeShow(newPanelElement, options);
-            if (_currentPanel) {
-              _currentPanel.beforeHide();
-            }
+          // Navigate to the pending navigation if any.
+          if (_pendingNavigation) {
+            var args = _pendingNavigation;
+            _pendingNavigation = null;
+            this.navigate.apply(this, args);
+          }
 
-            // Add a timeout for smoother transition
-            setTimeout((function doTransition() {
-              // Do transition
-              _transit(twoColumn, currentPanelElement, newPanelElement,
-                (function transitionCompleted() {
-                  panel.show(newPanelElement, options);
-                  if (_currentPanel) {
-                    _currentPanel.hide();
-                  }
-
-                  _currentPanelId = panelId;
-                  _currentPanel = panel;
-
-                  if (callback) {
-                    callback(true);
-                  }
-                  _navigating = false;
-              }).bind(this));
-            }).bind(this));
-          });
-        });
+          if (callback) {
+            callback();
+          }
+        }).bind(this));
       }
     };
 });
