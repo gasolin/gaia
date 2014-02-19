@@ -24,6 +24,7 @@ requireApp('system/test/unit/mock_telephony_settings.js');
 requireApp('system/test/unit/mock_ttl_view.js');
 requireApp('system/test/unit/mock_title.js');
 requireApp('system/test/unit/mock_visibility_manager.js');
+requireApp('system/test/unit/mock_layout_manager.js');
 
 mocha.globals([
   'Shortcuts',
@@ -42,7 +43,8 @@ mocha.globals([
   'ttlView',
   'title',
   'ActivityWindowFactory',
-  'visibilityManager'
+  'visibilityManager',
+  'layoutManager'
 ]);
 
 var mocksForBootstrap = new MocksHelper([
@@ -62,7 +64,8 @@ var mocksForBootstrap = new MocksHelper([
   'TelephonySettings',
   'TTLView',
   'Title',
-  'VisibilityManager'
+  'VisibilityManager',
+  'LayoutManager'
 ]).init();
 
 suite('system/Bootstrap', function() {
