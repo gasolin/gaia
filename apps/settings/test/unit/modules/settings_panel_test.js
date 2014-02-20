@@ -1,20 +1,30 @@
 'use strict';
 
-mocha.setup({globals: ['Settings', 'MockL10n', 'LazyLoader', 'startupLocale',
-  'initLocale']});
+mocha.setup({
+  globals: [
+    'Settings',
+    'MockL10n',
+    'LazyLoader',
+    'startupLocale',
+    'initLocale'
+  ]
+});
 
 suite('SettingsPanel', function() {
   suiteSetup(function(done) {
-    testRequire(['modules/settings_panel', 'modules/panel_utils',
-      'modules/settings_cache', 'unit/mock_l10n'],
-        (function(settingsPanelFunc, PanelUtils, SettingsCache, MockL10n) {
-          this.realL10n = navigator.mozL10n;
-          navigator.mozL10n = MockL10n;
+    testRequire([
+      'modules/settings_panel',
+      'modules/panel_utils',
+      'modules/settings_cache',
+      'unit/mock_l10n'
+    ], (function(settingsPanelFunc, PanelUtils, SettingsCache, MockL10n) {
+      this.realL10n = navigator.mozL10n;
+      navigator.mozL10n = MockL10n;
 
-          this.PanelUtils = PanelUtils;
-          this.SettingsCache = SettingsCache;
-          this.SettingsPanel = settingsPanelFunc;
-          done();
+      this.PanelUtils = PanelUtils;
+      this.SettingsCache = SettingsCache;
+      this.SettingsPanel = settingsPanelFunc;
+      done();
     }).bind(this));
   });
 

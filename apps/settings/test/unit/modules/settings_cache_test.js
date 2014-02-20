@@ -1,6 +1,6 @@
 'use strict';
 
-mocha.setup({globals: ['MockNavigatorSettings']});
+mocha.setup({ globals: ['MockNavigatorSettings'] });
 
 suite('SettingsCache', function() {
   suiteSetup(function(done) {
@@ -47,22 +47,20 @@ suite('SettingsCache', function() {
   });
 
   suite('getSettings()', function() {
-    test('the default values should be the same as mozSettings',
+    test('should return the same value as mozSettings',
       function(done) {
-        var that = this;
-        this.SettingsCache.getSettings(function(settings) {
-          for (var key in that.keyValuePairs) {
-            assert.ok(settings[key] === that.keyValuePairs[key]);
+        this.SettingsCache.getSettings((function(settings) {
+          for (var key in this.keyValuePairs) {
+            assert.ok(settings[key] === this.keyValuePairs[key]);
           }
           done();
-        });
+        }).bind(this));
     });
 
     test('should queue the settings requests before the cache being ready',
       function(done) {
         this.MockNavigatorSettings.mSyncRepliesOnly = true;
 
-        var that = this;
         var callCount = 10;
         var count = 0;
         var checkDone = function() {
@@ -72,12 +70,12 @@ suite('SettingsCache', function() {
           }
         };
 
-        var gotSettings = function(settings) {
-          for (var key in that.keyValuePairs) {
-            assert.ok(settings[key] === that.keyValuePairs[key]);
+        var gotSettings = (function(settings) {
+          for (var key in this.keyValuePairs) {
+            assert.ok(settings[key] === this.keyValuePairs[key]);
           }
           checkDone();
-        };
+        }).bind(this);
 
         // query the settings
         for (var i = 0; i < callCount; i++) {
@@ -90,24 +88,42 @@ suite('SettingsCache', function() {
         }, 1000);
     });
 
-    test('the value should reflect mozSettings changes', function(done) {
-      var that = this;
+    test('should reflect mozSettings changes', function(done) {
       var key = 'key2';
       var newValue = 'value2_1';
       // make the cache as the current mozSettings.
-      this.SettingsCache.getSettings(function() {
+      this.SettingsCache.getSettings((function() {
         var obj = {};
         obj[key] = newValue;
 
         // modify the value
-        var req = that.MockNavigatorSettings.createLock().set(obj);
-        req.onsuccess = function() {
-          that.SettingsCache.getSettings(function(settings) {
+        var req = this.MockNavigatorSettings.createLock().set(obj);
+        req.onsuccess = (function() {
+          this.SettingsCache.getSettings(function(settings) {
             assert.ok(settings[key] === newValue);
             done();
           });
-        };
-      });
+        }).bind(this);
+      }).bind(this));
+    });
+
+    test('should reflect newly created mozSettings fields', function(done) {
+      var newKey = 'key4';
+      var value = 'value4';
+      // make the cache as the current mozSettings.
+      this.SettingsCache.getSettings((function() {
+        var obj = {};
+        obj[newKey] = value;
+
+        // set the value
+        var req = this.MockNavigatorSettings.createLock().set(obj);
+        req.onsuccess = (function() {
+          this.SettingsCache.getSettings(function(settings) {
+            assert.ok(settings[newKey] === value);
+            done();
+          });
+        }).bind(this);
+      }).bind(this));
     });
   });
 
@@ -141,21 +157,20 @@ suite('SettingsCache', function() {
     });
 
     test('removeEventListener()', function(done) {
-      var that = this;
       var onSettingsChangeSpy = sinon.spy();
 
       this.SettingsCache.addEventListener('settingsChange',
         onSettingsChangeSpy);
-      this.mutateSetting('key2', 'value2_1', function() {
+      this.mutateSetting('key2', 'value2_1', (function() {
         // ensure the event listener has been added
         sinon.assert.calledOnce(onSettingsChangeSpy);
-        that.SettingsCache.removeEventListener('settingsChange',
+        this.SettingsCache.removeEventListener('settingsChange',
           onSettingsChangeSpy);
-        that.mutateSetting('key2', 'value2_2', function() {
+        this.mutateSetting('key2', 'value2_2', function() {
           sinon.assert.calledOnce(onSettingsChangeSpy);
           done();
         });
-      });
+      }).bind(this));
     });
   });
 });
