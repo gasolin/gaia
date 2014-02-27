@@ -138,6 +138,7 @@ suite('KeyboardHelper', function() {
 
   setup(function() {
     // reset KeyboardHelper each time
+    MockNavigatorSettings.mSyncRepliesOnly = true;
     KeyboardHelper.settings.enabled = {};
     KeyboardHelper.settings['default'] = defaultSettings['default'];
     KeyboardHelper.keyboardSettings = [];
