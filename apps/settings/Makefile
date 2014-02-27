@@ -21,11 +21,7 @@ BUILD_DIR=../../build_stage/settings
 
 .PHONY: all clean
 
-all: js_environment_available build stamp-commit-hash settings_configuration $(BUILD_DIR)/js/main.js
-
-build:
-	@echo 'Building settings app...'
-	@$(call run-app-js-command, build)
+all: js_environment_available stamp-commit-hash settings_configuration $(BUILD_DIR)/js/main.js
 
 clean:
 	rm -rf $(BUILD_DIR)
