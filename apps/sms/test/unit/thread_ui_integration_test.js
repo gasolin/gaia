@@ -6,13 +6,14 @@
 if (typeof GestureDetector === 'undefined') {
   require('/shared/js/gesture_detector.js');
 }
-requireApp('system/test/unit/mock_gesture_detector.js');
+require('/shared/test/unit/mocks/mock_gesture_detector.js');
 
 requireApp('sms/test/unit/mock_contact.js');
 requireApp('sms/test/unit/mock_l10n.js');
 requireApp('sms/test/unit/mock_navigatormoz_sms.js');
 requireApp('sms/test/unit/mock_message_manager.js');
 requireApp('sms/test/unit/mock_moz_activity.js');
+requireApp('sms/test/unit/mock_information.js');
 requireApp('sms/js/utils.js');
 requireApp('sms/js/settings.js');
 requireApp('sms/js/attachment_menu.js');
@@ -24,12 +25,12 @@ requireApp('sms/js/message_manager.js');
 requireApp('sms/js/thread_list_ui.js');
 requireApp('sms/js/thread_ui.js');
 requireApp('sms/js/attachment.js');
-requireApp('sms/js/fixed_header.js');
 requireApp('sms/js/contact_renderer.js');
 
 var mHelperIntegration = new MocksHelper([
   'MessageManager',
-  'MozActivity'
+  'MozActivity',
+  'Information'
 ]).init();
 
 suite('ThreadUI Integration', function() {

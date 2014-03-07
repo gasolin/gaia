@@ -6,7 +6,6 @@
         <button role="menuitem" id="edit-contact-button"><span class="icon icon-edit-contact" data-l10n-id="edit">edit</span></button>
       </menu>
       <h1 id='contact-name-title'></h1>
-      <sup id='favorite-star' class='hide'></sup>
     </header>
 
     <article id="contact-detail-wrapper" class="view-body">
@@ -24,22 +23,6 @@
                     #value#
                     <em>#carrier#</em>
                   </b>
-                </button>
-              </div>
-            </div>
-          </li>
-
-          <li id="birthday-template-#i#" data-template>
-            <h2 data-l10n-id="birthday">Birthday</h2>
-            <p><strong>#bday#</strong></p>
-          </li>
-
-          <li data-mail id='email-details-template-#i#' data-template>
-            <h2 data-l10n-id="#type_l10n_id#">#type#</h2>
-            <div class="item">
-              <div class="item-body-exp">
-                <button id="email-or-pick-#i#" class="activity icon icon-email">
-                  <b>#value#</b>
                 </button>
               </div>
             </div>
@@ -89,6 +72,22 @@
             </div>
           </li>
 
+          <li data-mail id='email-details-template-#i#' data-template>
+            <h2 data-l10n-id="#type_l10n_id#">#type#</h2>
+            <div class="item">
+              <div class="item-body-exp">
+                <button id="email-or-pick-#i#" class="activity icon icon-email">
+                  <b>#value#</b>
+                </button>
+              </div>
+            </div>
+          </li>
+
+          <li id="dates-template-#i#" data-template>
+            <h2>#type#</h2>
+            <p><strong>#date#</strong></p>
+          </li>
+
           <p data-comment id='note-details-template-#i#' data-template class="comment-notes">#note#</p>
           <div id='contact-detail-inner'>
             <h1 id='org-title'></h1>
@@ -106,4 +105,3 @@
     </article>
   </template>
 </element>
-

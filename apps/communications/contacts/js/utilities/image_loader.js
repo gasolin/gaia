@@ -74,7 +74,7 @@ if (!window.ImageLoader) {
      *  Loads the image contained in a DOM Element.
      */
     function defaultLoadImage(item) {
-      var image = item.querySelector('img[data-src]');
+      var image = item.querySelector('span[data-type=img][data-src]');
       if (!image) {
         return;
       }
@@ -84,7 +84,7 @@ if (!window.ImageLoader) {
       var src = tmp.src = image.dataset.src;
       tmp.onload = function onload() {
         --imgsLoading;
-        image.src = src;
+        image.style.backgroundImage = 'url(' + src + ')';
         if (tmp.complete) {
           item.dataset.visited = 'true';
         }
@@ -92,6 +92,7 @@ if (!window.ImageLoader) {
       };
 
       tmp.onabort = tmp.onerror = function onerror() {
+        --imgsLoading;
         item.dataset.visited = 'false';
         tmp = null;
       };
@@ -145,11 +146,11 @@ if (!window.ImageLoader) {
     } // update
 
     function releaseImage(item) {
-      var image = item.querySelector('img[data-src]');
+      var image = item.querySelector('span[data-type=img][data-src]');
       if (!image) {
         return null;
       }
-      image.src = '';
+      image.style.backgroundImage = 'none';
       item.dataset.visited = 'false';
       return image;
     }

@@ -8,23 +8,25 @@ requireApp('communications/contacts/js/views/details.js');
 requireApp('communications/contacts/js/utilities/event_listeners.js');
 requireApp('communications/contacts/js/utilities/templates.js');
 requireApp('communications/contacts/js/utilities/dom.js');
+requireApp('communications/contacts/test/unit/mock_navigation.js');
 requireApp('communications/contacts/test/unit/mock_contacts.js');
 requireApp('communications/contacts/test/unit/mock_contacts_list_obj.js');
 requireApp('communications/contacts/test/unit/mock_fb.js');
 requireApp('communications/contacts/test/unit/mock_extfb.js');
 
+require('/shared/test/unit/mocks/mock_contact_photo_helper.js');
+
 var subject,
     container,
     realL10n,
     realOnLine,
+    realMisc,
     dom,
     contact,
     contactDetails,
     listContainer,
-    star,
     detailsName,
     orgTitle,
-    birthdayTemplate,
     phonesTemplate,
     emailsTemplate,
     addressesTemplate,
@@ -48,7 +50,12 @@ var subject,
 
 var SCALE_RATIO = 1;
 
+var mocksHelperForDetailView = new MocksHelper([
+  'ContactPhotoHelper'
+]).init();
+
 suite('Render contact', function() {
+  mocksHelperForDetailView.attachTestHelpers();
 
   var isOnLine = true;
   function navigatorOnLine() {
@@ -73,6 +80,15 @@ suite('Render contact', function() {
       }
     };
 
+    realMisc = utils.misc;
+    utils.misc = {
+      formatDate: function(date) {
+        var offset = date.getTimezoneOffset() * 60 * 1000;
+        var normalizedDate = new Date(date.getTime() + offset);
+        return normalizedDate.toString();
+      }
+    };
+
     Object.defineProperty(navigator, 'onLine', {
       configurable: true,
       get: navigatorOnLine,
@@ -94,10 +110,8 @@ suite('Render contact', function() {
     subject.init(dom);
     contactDetails = dom.querySelector('#contact-detail');
     listContainer = dom.querySelector('#details-list');
-    star = dom.querySelector('#favorite-star');
     detailsName = dom.querySelector('#contact-name-title');
     orgTitle = dom.querySelector('#org-title');
-    birthdayTemplate = dom.querySelector('#birthday-template-\\#i\\#');
     phonesTemplate = dom.querySelector('#phone-details-template-\\#i\\#');
     emailsTemplate = dom.querySelector('#email-details-template-\\#i\\#');
     addressesTemplate = dom.querySelector('#address-details-template-\\#i\\#');
@@ -126,10 +140,11 @@ suite('Render contact', function() {
     if (realOnLine) {
       Object.defineProperty(navigator, 'onLine', realOnLine);
     }
+    utils.misc = realMisc;
   });
 
   setup(function() {
-    mockContact = new MockContactAllFields();
+    mockContact = new MockContactAllFields(true);
     subject.setContact(mockContact);
     TAG_OPTIONS = Contacts.getTags();
     window.set;
@@ -146,7 +161,7 @@ suite('Render contact', function() {
     });
 
     test('without name', function() {
-      var contactWoName = new MockContactAllFields();
+      var contactWoName = new MockContactAllFields(true);
       contactWoName.name = null;
       subject.setContact(contactWoName);
       subject.render(null, TAG_OPTIONS);
@@ -157,14 +172,14 @@ suite('Render contact', function() {
   suite('Render favorite', function() {
     test('with favorite contact', function() {
       subject.render(null, TAG_OPTIONS);
-      assert.equal(false, star.classList.contains('hide'));
+      assert.isTrue(detailsName.classList.contains('favorite'));
     });
     test('without favorite contact', function() {
-      var contactWoFav = new MockContactAllFields();
+      var contactWoFav = new MockContactAllFields(true);
       contactWoFav.category = [];
       subject.setContact(contactWoFav);
       subject.render(null, TAG_OPTIONS);
-      assert.equal(true, star.classList.contains('hide'));
+      assert.isFalse(detailsName.classList.contains('favorite'));
     });
   });
 
@@ -175,32 +190,12 @@ suite('Render contact', function() {
       assert.equal(false, orgTitle.classList.contains('hide'));
     });
     test('without org', function() {
-      var contactWoOrg = new MockContactAllFields();
+      var contactWoOrg = new MockContactAllFields(true);
       contactWoOrg.org = [];
       subject.setContact(contactWoOrg);
       subject.render(null, TAG_OPTIONS);
       assert.equal('', orgTitle.textContent);
       assert.equal(true, orgTitle.classList.contains('hide'));
-    });
-  });
-
-  suite('Render bday', function() {
-    test('with bday', function() {
-      subject.render(null, TAG_OPTIONS);
-      var bdayBlock = container.querySelector('#birthday-template-1');
-      assert.isNotNull(bdayBlock);
-      // Ensuring timezone correctly treated (Bug 880775)
-      var offset = mockContact.bday.getTimezoneOffset() * 60 * 1000;
-      var targetDate = new Date(mockContact.bday.getTime() + offset);
-      assert.equal(bdayBlock.querySelector('strong').textContent,
-                   targetDate.toString());
-    });
-    test('without bday', function() {
-      var contactWoBday = new MockContactAllFields();
-      contactWoBday.bday = null;
-      subject.setContact(contactWoBday);
-      subject.render(null, TAG_OPTIONS);
-      assert.equal(-1, container.innerHTML.indexOf('birthday'));
     });
   });
 
@@ -324,7 +319,7 @@ suite('Render contact', function() {
     });
 
     test('with 1 phone and carrier undefined', function() {
-      var contactNoCarrier = new MockContactAllFields();
+      var contactNoCarrier = new MockContactAllFields(true);
       contactNoCarrier.tel = [
         {
           value: '+34678987123',
@@ -341,7 +336,7 @@ suite('Render contact', function() {
     });
 
     test('with no phones', function() {
-      var contactWoTel = new MockContactAllFields();
+      var contactWoTel = new MockContactAllFields(true);
       contactWoTel.tel = [];
       subject.setContact(contactWoTel);
       subject.render(null, TAG_OPTIONS);
@@ -349,7 +344,7 @@ suite('Render contact', function() {
     });
 
     test('with null phones', function() {
-      var contactWoTel = new MockContactAllFields();
+      var contactWoTel = new MockContactAllFields(true);
       contactWoTel.tel = null;
       subject.setContact(contactWoTel);
       subject.render(null, TAG_OPTIONS);
@@ -357,12 +352,13 @@ suite('Render contact', function() {
     });
 
     test('with more than 1 phone', function() {
-      var contactMultTel = new MockContactAllFields();
+      var contactMultTel = new MockContactAllFields(true);
       contactMultTel.tel[1] = contactMultTel.tel[0];
       for (var elem in contactMultTel.tel[1]) {
         var currentElem = contactMultTel.tel[1][elem] + 'dup';
         contactMultTel.tel[1][elem] = currentElem;
       }
+      contactMultTel.tel[1].type = '';
       subject.setContact(contactMultTel);
       subject.render(null, TAG_OPTIONS);
       assert.include(container.innerHTML, 'phone-details-template-0');
@@ -372,7 +368,7 @@ suite('Render contact', function() {
       assert.include(container.innerHTML, contactMultTel.tel[0].type);
       assert.include(container.innerHTML, contactMultTel.tel[1].value);
       assert.include(container.innerHTML, contactMultTel.tel[1].carrier);
-      assert.include(container.innerHTML, contactMultTel.tel[1].type);
+      assert.include(container.innerHTML, subject.defaultTelType);
       assert.equal(-1, container.innerHTML.indexOf('phone-details-template-2'));
     });
   });
@@ -386,7 +382,7 @@ suite('Render contact', function() {
     });
 
     test('with no emails', function() {
-      var contactWoEmail = new MockContactAllFields();
+      var contactWoEmail = new MockContactAllFields(true);
       contactWoEmail.email = [];
       subject.setContact(contactWoEmail);
       subject.render(null, TAG_OPTIONS);
@@ -394,7 +390,7 @@ suite('Render contact', function() {
     });
 
     test('with null emails', function() {
-      var contactWoEmail = new MockContactAllFields();
+      var contactWoEmail = new MockContactAllFields(true);
       contactWoEmail.email = null;
       subject.setContact(contactWoEmail);
       subject.render(null, TAG_OPTIONS);
@@ -402,7 +398,7 @@ suite('Render contact', function() {
     });
 
     test('with more than 1 email', function() {
-      var contactMultEmail = new MockContactAllFields();
+      var contactMultEmail = new MockContactAllFields(true);
       contactMultEmail.email[1] = contactMultEmail.email[0];
       for (var elem in contactMultEmail.email[1]) {
         var currentElem = contactMultEmail.email[1][elem] + 'dup';
@@ -437,7 +433,7 @@ suite('Render contact', function() {
     });
 
     test('with no addresses', function() {
-      var contactWoAddress = new MockContactAllFields();
+      var contactWoAddress = new MockContactAllFields(true);
       contactWoAddress.adr = [];
       subject.setContact(contactWoAddress);
       subject.render(null, TAG_OPTIONS);
@@ -445,7 +441,7 @@ suite('Render contact', function() {
     });
 
     test('with null addresses', function() {
-      var contactWoAddress = new MockContactAllFields();
+      var contactWoAddress = new MockContactAllFields(true);
       contactWoAddress.adr = null;
       subject.setContact(contactWoAddress);
       subject.render(null, TAG_OPTIONS);
@@ -453,7 +449,7 @@ suite('Render contact', function() {
     });
 
     test('with more than 1 address', function() {
-      var contactMultAddress = new MockContactAllFields();
+      var contactMultAddress = new MockContactAllFields(true);
       contactMultAddress.adr[1] = contactMultAddress.adr[0];
       for (var elem in contactMultAddress.adr[1]) {
         var currentElem = contactMultAddress.adr[1][elem] + 'dup';
@@ -485,6 +481,65 @@ suite('Render contact', function() {
       assert.equal(-1, toCheck.indexOf('address-details-template-2'));
     });
   });
+
+  suite('Render dates', function() {
+    test('with bday', function() {
+      subject.render(null, TAG_OPTIONS);
+      var bdayBlock = container.querySelector('#dates-template-1');
+      assert.isNotNull(bdayBlock);
+      // Ensuring timezone correctly treated (Bug 880775)
+      var offset = mockContact.bday.getTimezoneOffset() * 60 * 1000;
+      var targetDate = new Date(mockContact.bday.getTime() + offset);
+      assert.equal(bdayBlock.querySelector('strong').textContent,
+                   targetDate.toString());
+    });
+
+    test('with anniversary', function() {
+      var contactWithAnn = new MockContactAllFields(true);
+      contactWithAnn.bday = null;
+      contactWithAnn.anniversary = new Date(0);
+      subject.setContact(contactWithAnn);
+      subject.render(null, TAG_OPTIONS);
+
+      var dateBlock = container.querySelector('#dates-template-1');
+      assert.isNotNull(dateBlock);
+      // Ensuring timezone correctly treated (Bug 880775)
+      var offset = contactWithAnn.anniversary.getTimezoneOffset() * 60 * 1000;
+      var targetDate = new Date(contactWithAnn.anniversary.getTime() + offset);
+      assert.equal(dateBlock.querySelector('strong').textContent,
+                   targetDate.toString());
+    });
+
+    test('with bday and anniversary', function() {
+      var contactWithAll = new MockContactAllFields(true);
+      contactWithAll.anniversary = new Date(0);
+      subject.setContact(contactWithAll);
+      subject.render(null, TAG_OPTIONS);
+
+      var fields = ['bday', 'anniversary'];
+
+      for (var j = 0; j < fields.length; j++) {
+        var dateBlock = container.querySelector('#dates-template-' + (j + 1));
+        assert.isNotNull(dateBlock);
+        // Ensuring timezone correctly treated (Bug 880775)
+        var offset = contactWithAll[fields[j]].getTimezoneOffset() * 60 * 1000;
+        var targetDate = new Date(contactWithAll[fields[j]].getTime() + offset);
+        assert.equal(dateBlock.querySelector('strong').textContent,
+                     targetDate.toString());
+      }
+    });
+
+    test('without dates', function() {
+      var contactWoDates = new MockContactAllFields(true);
+      contactWoDates.bday = null;
+      contactWoDates.anniversary = null;
+
+      subject.setContact(contactWoDates);
+      subject.render(null, TAG_OPTIONS);
+      assert.equal(-1, container.innerHTML.indexOf('dates'));
+    });
+  });
+
   suite('Render notes', function() {
     test('with 1 note', function() {
       subject.render(null, TAG_OPTIONS);
@@ -494,7 +549,7 @@ suite('Render contact', function() {
     });
 
     test('with no notes', function() {
-      var contactWoNote = new MockContactAllFields();
+      var contactWoNote = new MockContactAllFields(true);
       contactWoNote.note = [];
       subject.setContact(contactWoNote);
       subject.render(null, TAG_OPTIONS);
@@ -502,7 +557,7 @@ suite('Render contact', function() {
     });
 
     test('with null notes', function() {
-      var contactWoNote = new MockContactAllFields();
+      var contactWoNote = new MockContactAllFields(true);
       contactWoNote.note = null;
       subject.setContact(contactWoNote);
       subject.render(null, TAG_OPTIONS);
@@ -510,7 +565,7 @@ suite('Render contact', function() {
     });
 
     test('with more than 1 note', function() {
-      var contactMultNote = new MockContactAllFields();
+      var contactMultNote = new MockContactAllFields(true);
       contactMultNote.note[1] = contactMultNote.note[0];
       for (var elem in contactMultNote.note[1]) {
         var currentElem = contactMultNote.note[1][elem] + 'dup';
@@ -525,35 +580,6 @@ suite('Render contact', function() {
       assert.include(container.innerHTML,
                     Normalizer.escapeHTML(contactMultNote.note[1], true));
       assert.equal(-1, container.innerHTML.indexOf('note-details-template-2'));
-    });
-  });
-  suite('Render photo', function() {
-    test('with photo', function() {
-      subject.render(null, TAG_OPTIONS);
-      assert.isTrue(contactDetails.classList.contains('up'));
-      assert.include(dom.innerHTML, mockContact.photo[0]);
-    });
-    test('without photo', function() {
-      var contactWoPhoto = new MockContactAllFields();
-      contactWoPhoto.photo = [];
-      subject.setContact(contactWoPhoto);
-      subject.render(null, TAG_OPTIONS);
-      assert.equal(cover.style.backgroundImage, '');
-      assert.equal(cover.style.overflow, 'auto');
-      assert.equal(contactDetails.style.transform, '');
-      assert.isTrue(contactDetails.classList.contains('no-photo'));
-      assert.isFalse(contactDetails.classList.contains('up'));
-    });
-    test('with null photo', function() {
-      var contactWoPhoto = new MockContactAllFields();
-      contactWoPhoto.photo = null;
-      subject.setContact(contactWoPhoto);
-      subject.render(null, TAG_OPTIONS);
-      assert.equal(cover.style.backgroundImage, '');
-      assert.equal(cover.style.overflow, 'auto');
-      assert.equal(contactDetails.style.transform, '');
-      assert.isTrue(contactDetails.classList.contains('no-photo'));
-      assert.isFalse(contactDetails.classList.contains('up'));
     });
   });
 
@@ -587,6 +613,64 @@ suite('Render contact', function() {
 
       window.fb.setIsFbContact(false);
       window.fb.setIsFbLinked(false);
+    });
+  });
+
+  suite('Render photos', function() {
+    test('without photo', function() {
+      subject.render(null, TAG_OPTIONS);
+      assert.equal(cover.style.backgroundImage, '');
+      assert.equal(cover.style.overflow, 'auto');
+      assert.equal(contactDetails.style.transform, '');
+      assert.isTrue(contactDetails.classList.contains('no-photo'));
+      assert.isFalse(contactDetails.classList.contains('up'));
+    });
+
+    test('with null photo', function() {
+      var contactWoPhoto = new MockContactAllFields();
+      contactWoPhoto.photo = null;
+      subject.setContact(contactWoPhoto);
+
+      subject.render(null, TAG_OPTIONS);
+
+      assert.equal(cover.style.backgroundImage, '');
+      assert.equal(cover.style.overflow, 'auto');
+      assert.equal(contactDetails.style.transform, '');
+      assert.isTrue(contactDetails.classList.contains('no-photo'));
+      assert.isFalse(contactDetails.classList.contains('up'));
+    });
+
+    // See bug 946064
+    test(
+    'Adding one with photo and then adding the same (photo is kept as it is)',
+    function(done) {
+      var contact = new MockContactAllFields();
+      subject.setContact(contact);
+      var observer = new MutationObserver(function() {
+        assert.isTrue(contactDetails.classList.contains('up'));
+        assert.include(dom.innerHTML, contact.photo[0]);
+
+        observer.disconnect();
+        var spy = sinon.spy(Contacts, 'updatePhoto');
+
+        var observer2 = new MutationObserver(function() {
+          observer2.disconnect();
+          assert.equal(spy.callCount, 0);
+          done();
+        });
+        observer2.observe(cover, {
+          attributes: true,
+          attributeFilter: ['data-photo-ready']
+        });
+        subject.render(null, TAG_OPTIONS);
+      });
+
+      observer.observe(cover, {
+        attributes: true,
+        attributeFilter: ['data-img-hash']
+      });
+
+      subject.render(null, TAG_OPTIONS);
     });
   });
 

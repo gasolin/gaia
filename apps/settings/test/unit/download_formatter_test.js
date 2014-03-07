@@ -16,6 +16,7 @@ suite('DownloadFormatter', function() {
 
   suiteTeardown(function() {
     navigator.mozL10n = realL10n;
+    realL10n = null;
   });
 
   var l10nSpy;
@@ -35,6 +36,26 @@ suite('DownloadFormatter', function() {
     var params = l10nSpy.args[1][1];
     assert.equal(params.size, 1.50);
     assert.equal(params.unit, 'byteUnit-KB');
+  });
+
+  test(' getFormattedSize MB', function() {
+    var bytes = 1024 * 1024 * 999; // 999 MB
+    DownloadFormatter.getFormattedSize(bytes);
+    assert.equal(l10nSpy.args[1][0], 'fileSize');
+
+    var params = l10nSpy.args[1][1];
+    assert.equal(params.size, 999);
+    assert.equal(params.unit, 'byteUnit-MB');
+  });
+
+  test(' getFormattedSize GB', function() {
+    var bytes = 1024 * 1024 * 1024 * 2.6; // 2.6 GB
+    DownloadFormatter.getFormattedSize(bytes);
+    assert.equal(l10nSpy.args[1][0], 'fileSize');
+
+    var params = l10nSpy.args[1][1];
+    assert.equal(params.size, 2.6);
+    assert.equal(params.unit, 'byteUnit-GB');
   });
 
   test(' getPercentage', function() {

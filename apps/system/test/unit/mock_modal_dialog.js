@@ -31,7 +31,11 @@ var MockModalDialog = {
   },
 
   mTeardown: function mmd_mTeardown() {
+    delete this.mCallback;
     this.init();
+  },
+
+  selectOne: function mmd_selectOne() {
   }
 };
 

@@ -1,54 +1,95 @@
+/* global UIManager, SimManager, MocksHelper, MockNavigatorMozIccManager,
+          MockNavigatorMozMobileConnections, Navigation, MockL10n */
+
 'use strict';
 
-requireApp(
-  'communications/ftu/test/unit/mock_navigator_moz_mobile_connection.js');
+require(
+  '/shared/test/unit/mocks/mock_navigator_moz_mobile_connections.js');
+require(
+  '/shared/test/unit/mocks/mock_navigator_moz_icc_manager.js');
 requireApp('communications/ftu/test/unit/mock_ui_manager.js');
 requireApp('communications/ftu/test/unit/mock_l10n.js');
-
-requireApp('communications/shared/test/unit/mocks/mock_icc_helper.js');
 
 requireApp('communications/ftu/js/sim_manager.js');
 requireApp('communications/ftu/js/navigation.js');
 
 require('/shared/test/unit/load_body_html_helper.js');
 
-var _;
 var mocksHelperForSimManager = new MocksHelper([
-  'UIManager',
-  'IccHelper'
+  'UIManager'
 ]).init();
 
 suite('sim mgmt >', function() {
   var realL10n,
-      realMozMobileConnection;
+      realMozIccManager,
+      realMozMobileConnections;
   var mocksHelper = mocksHelperForSimManager;
-  var conn, container, navigationSpy;
+  var navigationStub,
+      iccId0,
+      iccInfo0,
+      req,
+      getCardLockRetryCountStub;
+
+  var setupRetryCount = function() {
+    req = { result: { retryCount: 3 } };
+    getCardLockRetryCountStub = sinon.stub(iccInfo0, 'getCardLockRetryCount',
+      function() {
+        return req;
+      });
+  };
+
+  var fireRetryCountCallback = function() {
+    req.onsuccess && req.onsuccess();
+  };
+
+  var teardownRetryCount = function() {
+    getCardLockRetryCountStub.restore();
+  };
 
   suiteSetup(function() {
     loadBodyHTML('/ftu/index.html');
 
-    realMozMobileConnection = navigator.mozMobileConnection;
-    navigator.mozMobileConnection = MockNavigatorMozMobileConnection;
+    realMozIccManager = navigator.mozIccManager;
+    navigator.mozIccManager = MockNavigatorMozIccManager;
+
+    realMozMobileConnections = navigator.mozMobileConnections;
+    MockNavigatorMozMobileConnections[0].iccId =
+                                     navigator.mozIccManager.iccIds[0];
+    navigator.mozMobileConnections = MockNavigatorMozMobileConnections;
 
     realL10n = navigator.mozL10n;
     navigator.mozL10n = MockL10n;
 
     mocksHelper.suiteSetup();
+
+    iccId0 = navigator.mozIccManager.iccIds[0];
+    iccInfo0 = navigator.mozIccManager.getIccById(iccId0);
   });
 
   setup(function() {
     SimManager.init();
-    conn = navigator.mozMobileConnection;
 
     UIManager.activationScreen.classList.remove('show');
     UIManager.unlockSimScreen.classList.add('show');
+
+    mocksHelper.setup();
+    setupRetryCount();
+
+  });
+
+  teardown(function() {
+    mocksHelper.teardown();
+    teardownRetryCount();
   });
 
   suiteTeardown(function() {
     document.body.innerHTML = '';
 
-    navigator.mozMobileConnection = realMozMobileConnection;
-    realMozMobileConnection = null;
+    navigator.mozMobileConnections = realMozMobileConnections;
+    realMozMobileConnections = null;
+
+    navigator.mozIccManager = realMozIccManager;
+    realMozIccManager = null;
 
     navigator.mozL10n = realL10n;
     realL10n = null;
@@ -57,34 +98,43 @@ suite('sim mgmt >', function() {
   });
 
   test('"Skip" hides the screen', function() {
+    iccInfo0.cardState = 'pinRequired';
+    SimManager.handleCardState();
+
+    fireRetryCountCallback();
+    assert.isFalse(UIManager.pinRetriesLeft.classList.contains('hidden'));
+    assert.isTrue(getCardLockRetryCountStub.calledOnce);
+
     SimManager.skip();
     assert.isTrue(UIManager.activationScreen.classList.contains('show'));
     assert.isFalse(UIManager.unlockSimScreen.classList.contains('show'));
+    assert.isTrue(UIManager.pinRetriesLeft.classList.contains('hidden'));
   });
 
   test('"Back" hides the screen', function() {
-    navigationSpy = sinon.spy(Navigation, 'back');
+    iccInfo0.cardState = 'pinRequired';
+    SimManager.handleCardState();
+
+    fireRetryCountCallback();
+    assert.isFalse(UIManager.pinRetriesLeft.classList.contains('hidden'));
+
+    navigationStub = sinon.stub(Navigation, 'back');
     SimManager.back();
-    assert.ok(navigationSpy.calledOnce);
+    assert.ok(navigationStub.calledOnce);
     assert.isTrue(UIManager.activationScreen.classList.contains('show'));
     assert.isFalse(UIManager.unlockSimScreen.classList.contains('show'));
+    assert.isTrue(UIManager.pinRetriesLeft.classList.contains('hidden'));
+    navigationStub.restore();
   });
 
   suite('Handle state changes', function() {
-    suiteSetup(function() {
-      SimManager._unlocked = false;
-    });
 
     setup(function() {
       UIManager.unlockSimScreen.classList.remove('show');
     });
 
-    suiteTeardown(function() {
-      SimManager._unlocked = null;
-    });
-
     test('pinRequired shows PIN screen', function() {
-      IccHelper.setProperty('cardState', 'pinRequired');
+      iccInfo0.cardState = 'pinRequired';
       SimManager.handleCardState();
 
       assert.isTrue(UIManager.unlockSimScreen.classList.contains('show'));
@@ -92,21 +142,30 @@ suite('sim mgmt >', function() {
       assert.isTrue(UIManager.pincodeScreen.classList.contains('show'));
       assert.isFalse(UIManager.pukcodeScreen.classList.contains('show'));
       assert.isFalse(UIManager.xckcodeScreen.classList.contains('show'));
+
+      fireRetryCountCallback();
+      assert.isFalse(UIManager.pinRetriesLeft.classList.contains('hidden'));
+      assert.isTrue(getCardLockRetryCountStub.calledOnce);
     });
 
     test('pukRequired shows PUK screen', function() {
-      IccHelper.setProperty('cardState', 'pukRequired');
+      iccInfo0.cardState = 'pukRequired';
       SimManager.handleCardState();
 
       assert.isTrue(UIManager.unlockSimScreen.classList.contains('show'));
+      assert.equal('type_pin', UIManager.pinLabel.textContent);
 
       assert.isFalse(UIManager.pincodeScreen.classList.contains('show'));
       assert.isTrue(UIManager.pukcodeScreen.classList.contains('show'));
       assert.isFalse(UIManager.xckcodeScreen.classList.contains('show'));
+
+      fireRetryCountCallback();
+      assert.isFalse(UIManager.pukRetriesLeft.classList.contains('hidden'));
+      assert.isTrue(getCardLockRetryCountStub.calledOnce);
     });
 
     test('networkLocked shows XCK screen', function() {
-      IccHelper.setProperty('cardState', 'networkLocked');
+      iccInfo0.cardState = 'networkLocked';
       SimManager.handleCardState();
 
       assert.isTrue(UIManager.unlockSimScreen.classList.contains('show'));
@@ -114,17 +173,100 @@ suite('sim mgmt >', function() {
       assert.isFalse(UIManager.pincodeScreen.classList.contains('show'));
       assert.isFalse(UIManager.pukcodeScreen.classList.contains('show'));
       assert.isTrue(UIManager.xckcodeScreen.classList.contains('show'));
+
+      fireRetryCountCallback();
+      assert.isFalse(UIManager.xckRetriesLeft.classList.contains('hidden'));
+      assert.isTrue(getCardLockRetryCountStub.calledOnce);
+    });
+  });
+
+  suite('Handle state changes DSDS', function() {
+    var iccId1;
+    var iccInfo1;
+
+    suiteSetup(function() {
+      iccId1 = '98765';
+      navigator.mozIccManager.addIcc(iccId1);
+      iccInfo1 = navigator.mozIccManager.getIccById(iccId1);
+      navigator.mozMobileConnections.mAddMobileConnection();
+      navigator.mozMobileConnections[1].iccId = iccId1;
+      navigator.mozMobileConnections[1].iccInfo = iccInfo1;
+
+      SimManager.updateIccState(iccId1);
+      SimManager.simSlots = 2;
+    });
+
+    suiteTeardown(function() {
+      navigator.mozIccManager.removeIcc(iccId1);
+      navigator.mozMobileConnections.mRemoveMobileConnection(1);
+      SimManager.simSlots = 1;
+      SimManager.icc1 = null;
+    });
+
+    test('pinRequired DSDS screen', function() {
+      iccInfo0.cardState = 'pinRequired';
+      iccInfo1.cardState = 'pinRequired';
+      SimManager.handleCardState();
+
+      assert.isTrue(UIManager.unlockSimScreen.classList.contains('show'));
+      assert.equal(navigator.mozL10n.get('pincodeLabel', {n: 1}),
+        UIManager.pinLabel.textContent);
+
+      fireRetryCountCallback();
+      assert.isTrue(getCardLockRetryCountStub.calledOnce);
+      assert.isFalse(UIManager.pinRetriesLeft.classList.contains('hidden'));
+
+      SimManager.skip();
+      assert.equal(navigator.mozL10n.get('pincodeLabel', {n: 2}),
+        UIManager.pinLabel.textContent);
+      assert.isTrue(UIManager.pinRetriesLeft.classList.contains('hidden'));
+    });
+
+    test('pukRequired DSDS screen', function() {
+      iccInfo0.cardState = 'pukRequired';
+      iccInfo1.cardState = 'pukRequired';
+      SimManager.handleCardState();
+
+      assert.isTrue(UIManager.unlockSimScreen.classList.contains('show'));
+      assert.equal(navigator.mozL10n.get('pukcodeLabel', {n: 1}),
+        UIManager.pukLabel.textContent);
+
+      fireRetryCountCallback();
+      assert.isTrue(getCardLockRetryCountStub.calledOnce);
+      assert.isFalse(UIManager.pukRetriesLeft.classList.contains('hidden'));
+
+      SimManager.skip();
+      assert.equal(navigator.mozL10n.get('pukcodeLabel', {n: 2}),
+        UIManager.pukLabel.textContent);
+      assert.isTrue(UIManager.pukRetriesLeft.classList.contains('hidden'));
+    });
+
+    test('xckRequired DSDS screen', function() {
+      iccInfo0.cardState = 'networkLocked';
+      iccInfo1.cardState = 'networkLocked';
+      SimManager.handleCardState();
+
+      assert.isTrue(UIManager.unlockSimScreen.classList.contains('show'));
+      assert.equal(navigator.mozL10n.get('nckcodeLabel', {n: 1}),
+        UIManager.xckLabel.textContent);
+
+      fireRetryCountCallback();
+      assert.isTrue(getCardLockRetryCountStub.calledOnce);
+      assert.isFalse(UIManager.xckRetriesLeft.classList.contains('hidden'));
+
+      SimManager.skip();
+      assert.equal(navigator.mozL10n.get('nckcodeLabel', {n: 2}),
+        UIManager.xckLabel.textContent);
+      assert.isTrue(UIManager.xckRetriesLeft.classList.contains('hidden'));
     });
   });
 
   suite('Unlocking', function() {
-    setup(function() {
-      SimManager._unlocked = false;
-    });
 
     suite('PIN unlock ', function() {
       setup(function() {
-        IccHelper.setProperty('cardState', 'pinRequired');
+        iccInfo0.cardState = 'pinRequired';
+        SimManager.handleCardState();
         // start from original state each test
         UIManager.pinInput.classList.remove('onerror');
         UIManager.pinError.classList.add('hidden');
@@ -132,9 +274,6 @@ suite('sim mgmt >', function() {
       });
 
       suite('Unlock button > ', function() {
-        setup(function() {
-          SimManager.handleCardState();
-        });
         teardown(function() {
           UIManager.pinInput.value = '';
         });
@@ -142,7 +281,7 @@ suite('sim mgmt >', function() {
           assert.isTrue(UIManager.unlockSimButton.disabled);
         });
 
-        test('shuld be disabled with short PIN', function() {
+        test('should be disabled with short PIN', function() {
           UIManager.pinInput.value = 123;
           UIManager.pinInput.dispatchEvent(new CustomEvent('input'));
           assert.isTrue(UIManager.unlockSimButton.disabled);
@@ -161,7 +300,7 @@ suite('sim mgmt >', function() {
         assert.isTrue(UIManager.pinRetriesLeft.classList.contains('hidden'));
         assert.isTrue(UIManager.pinInput.classList.contains('onerror'));
         assert.isFalse(UIManager.pinError.classList.contains('hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('too long PIN', function() {
         UIManager.pinInput.value = 123456789;
@@ -169,15 +308,17 @@ suite('sim mgmt >', function() {
         assert.isTrue(UIManager.pinRetriesLeft.classList.contains('hidden'));
         assert.isTrue(UIManager.pinInput.classList.contains('onerror'));
         assert.isFalse(UIManager.pinError.classList.contains('hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('all fields correct', function() {
+        fireRetryCountCallback();
+        assert.isFalse(UIManager.pinRetriesLeft.classList.contains('hidden'));
         UIManager.pinInput.value = 1234;
         SimManager.unlock();
         assert.isTrue(UIManager.pinRetriesLeft.classList.contains('hidden'));
         assert.isFalse(UIManager.pinInput.classList.contains('onerror'));
         assert.isTrue(UIManager.pinError.classList.contains('hidden'));
-        assert.isTrue(SimManager._unlocked);
+        assert.isTrue(SimManager.icc0.unlocked);
         assert.isTrue(UIManager.activationScreen.classList.contains('show'));
         assert.isFalse(UIManager.unlockSimScreen.classList.contains('show'));
       });
@@ -185,7 +326,8 @@ suite('sim mgmt >', function() {
 
     suite('PUK unlock ', function() {
       setup(function() {
-        IccHelper.setProperty('cardState', 'pukRequired');
+        iccInfo0.cardState = 'pukRequired';
+        SimManager.handleCardState();
         // start from original state each test
         UIManager.pukInput.classList.remove('onerror');
         UIManager.pukError.classList.add('hidden');
@@ -199,7 +341,7 @@ suite('sim mgmt >', function() {
         assert.isTrue(UIManager.pukRetriesLeft.classList.contains('hidden'));
         assert.isTrue(UIManager.pukInput.classList.contains('onerror'));
         assert.isFalse(UIManager.pukError.classList.contains('hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('too short newPIN', function() {
         UIManager.pukInput.value = 12345678;
@@ -209,7 +351,7 @@ suite('sim mgmt >', function() {
         assert.isTrue(UIManager.pukRetriesLeft.classList.contains('hidden'));
         assert.isTrue(UIManager.newpinInput.classList.contains('onerror'));
         assert.isFalse(UIManager.newpinError.classList.contains('hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('too long newPIN', function() {
         UIManager.pukInput.value = 12345678;
@@ -219,7 +361,7 @@ suite('sim mgmt >', function() {
         assert.isTrue(UIManager.pukRetriesLeft.classList.contains('hidden'));
         assert.isTrue(UIManager.newpinInput.classList.contains('onerror'));
         assert.isFalse(UIManager.newpinError.classList.contains('hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('different PIN and confirm PIN', function() {
         UIManager.pukInput.value = 12345678;
@@ -233,9 +375,11 @@ suite('sim mgmt >', function() {
                       'onerror'));
         assert.isFalse(UIManager.confirmNewpinError.classList.contains(
                        'hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('all fields correct', function() {
+        fireRetryCountCallback();
+        assert.isFalse(UIManager.pukRetriesLeft.classList.contains('hidden'));
         UIManager.pukInput.value = 12345678;
         UIManager.newpinInput.value = 1234;
         UIManager.confirmNewpinInput.value = 1234;
@@ -250,7 +394,7 @@ suite('sim mgmt >', function() {
                       'onerror'));
         assert.isTrue(UIManager.confirmNewpinError.classList.contains(
                        'hidden'));
-        assert.isTrue(SimManager._unlocked);
+        assert.isTrue(SimManager.icc0.unlocked);
         assert.isTrue(UIManager.activationScreen.classList.contains('show'));
         assert.isFalse(UIManager.unlockSimScreen.classList.contains('show'));
       });
@@ -258,7 +402,8 @@ suite('sim mgmt >', function() {
 
     suite('XCK unlock ', function() {
       setup(function() {
-        IccHelper.setProperty('cardState', 'networkLocked');
+        iccInfo0.cardState = 'networkLocked';
+        SimManager.handleCardState();
         // start from original state each test
         UIManager.xckInput.classList.remove('onerror');
         UIManager.xckError.classList.add('hidden');
@@ -272,7 +417,7 @@ suite('sim mgmt >', function() {
         assert.isTrue(UIManager.xckRetriesLeft.classList.contains('hidden'));
         assert.isTrue(UIManager.xckInput.classList.contains('onerror'));
         assert.isFalse(UIManager.xckError.classList.contains('hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('too long XCK', function() {
         UIManager.xckInput.value = 12345678901234567;
@@ -281,16 +426,18 @@ suite('sim mgmt >', function() {
         assert.isTrue(UIManager.xckRetriesLeft.classList.contains('hidden'));
         assert.isTrue(UIManager.xckInput.classList.contains('onerror'));
         assert.isFalse(UIManager.xckError.classList.contains('hidden'));
-        assert.isFalse(SimManager._unlocked);
+        assert.isFalse(SimManager.icc0.unlocked);
       });
       test('all fields correct', function() {
+        fireRetryCountCallback();
+        assert.isFalse(UIManager.xckRetriesLeft.classList.contains('hidden'));
         UIManager.xckInput.value = 12345678;
         SimManager.unlock();
 
         assert.isTrue(UIManager.xckRetriesLeft.classList.contains('hidden'));
         assert.isFalse(UIManager.xckInput.classList.contains('onerror'));
         assert.isTrue(UIManager.xckError.classList.contains('hidden'));
-        assert.isTrue(SimManager._unlocked);
+        assert.isTrue(SimManager.icc0.unlocked);
         assert.isTrue(UIManager.activationScreen.classList.contains('show'));
         assert.isFalse(UIManager.unlockSimScreen.classList.contains('show'));
       });
@@ -298,19 +445,19 @@ suite('sim mgmt >', function() {
   });
 
   suite('No Telephony', function() {
-    var realMozMobileConnection;
+    var realMozMobileConnections;
 
     setup(function() {
-      realMozMobileConnection = navigator.mozMobileConnection;
+      realMozMobileConnections = navigator.mozMobileConnections;
       // no telephony API
-      navigator.mozMobileConnection = null;
+      navigator.mozMobileConnections = null;
 
       SimManager.init();
     });
 
     teardown(function() {
-      navigator.mozMobileConnection = realMozMobileConnection;
-      realMozMobileConnection = null;
+      navigator.mozMobileConnections = realMozMobileConnections;
+      realMozMobileConnections = null;
     });
 
     test('hide sim import section', function() {

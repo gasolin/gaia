@@ -1,5 +1,7 @@
 'use strict';
 
+var _;
+
 var UIManager = {
 
   // As in other Gaia apps, we store all the dom selectors in one
@@ -10,12 +12,14 @@ var UIManager = {
     'splash-screen',
     'activation-screen',
     'progress-bar',
+    'progress-bar-state',
     'finish-screen',
     'nav-bar',
     'main-title',
     // Unlock SIM Screen
     'unlock-sim-screen',
     'unlock-sim-header',
+    'unlock-sim-back',
     // PIN Screen
     'pincode-screen',
     'pin-label',
@@ -42,6 +46,16 @@ var UIManager = {
     'xck-retries-left',
     'xck-input',
     'xck-error',
+    // SIM info
+    'sim-info-screen',
+    'sim-info-back',
+    'sim-info-forward',
+    'sim-info-1',
+    'sim-info-2',
+    'sim-number-1',
+    'sim-number-2',
+    'sim-carrier-1',
+    'sim-carrier-2',
     // Import contacts
     'sim-import',
     'sim-import-button',
@@ -74,6 +88,7 @@ var UIManager = {
     // Tutorial
     'tutorial-screen',
     'tutorial-progress',
+    'tutorial-progress-state',
     'lets-go-button',
     'skip-tutorial-button',
     // Privacy Settings
@@ -88,6 +103,8 @@ var UIManager = {
   ],
 
   init: function ui_init() {
+    _ = navigator.mozL10n.get;
+
     // Initialization of the DOM selectors
     this.domSelectors.forEach(function createElementRef(name) {
       this[toCamelCase(name)] = document.getElementById(name);
@@ -106,6 +123,9 @@ var UIManager = {
     this.skipPinButton.addEventListener('click', this);
     this.backSimButton.addEventListener('click', this);
     this.unlockSimButton.addEventListener('click', this);
+    this.unlockSimBack.addEventListener('click', this);
+    this.simInfoBack.addEventListener('click', this);
+    this.simInfoForward.addEventListener('click', this);
 
     this.dataConnectionSwitch.addEventListener('click', this);
 
@@ -141,13 +161,13 @@ var UIManager = {
     });
 
     // Input scroll workaround
-    var top = this.newsletterInput.offsetTop;
     this.newsletterInput.addEventListener('focus', function() {
       window.addEventListener('resize', function resize() {
         window.removeEventListener('resize', resize);
         // Need to wait till resize is done
         setTimeout(function() {
-          document.getElementById('browser_privacy').scrollTop = top;
+          var page = document.getElementById('browser_privacy');
+          UIManager.scrollToElement(page, UIManager.newsletterInput);
         }, 30);
       });
     });
@@ -189,9 +209,6 @@ var UIManager = {
         }.bind(this));
 
     this.skipTutorialButton.addEventListener('click', function() {
-      var layout = (ScreenLayout && ScreenLayout.getCurrentLayout) ?
-        ScreenLayout.getCurrentLayout() : 'tiny';
-
       // For tiny devices
       if (ScreenLayout.getCurrentLayout() === 'tiny') {
         WifiManager.finish();
@@ -217,10 +234,14 @@ var UIManager = {
                             this.onOfflineDialogButtonClick.bind(this));
   },
 
+  scrollToElement: function ui_scrollToElement(container, element) {
+    container.scrollTop = element.offsetTop;
+  },
+
   sendNewsletter: function ui_sendNewsletter(callback) {
     var self = this;
     var emailValue = self.newsletterInput.value;
-    if (emailValue == '') {
+    if (emailValue === '') {
       return callback(true);
     } else {
       utils.overlay.show(_('email-loading'), 'spinner');
@@ -228,7 +249,7 @@ var UIManager = {
         if (window.navigator.onLine) {
           Basket.send(emailValue, function emailSent(err, data) {
             if (err) {
-              if (err.desc && err.desc.indexOf('email address') > -1) {
+              if (err.code && err.code === Basket.errors.INVALID_EMAIL) {
                 ConfirmDialog.show(_('invalid-email-dialog-title'),
                                    _('invalid-email-dialog-text'),
                                    {
@@ -280,11 +301,18 @@ var UIManager = {
         SimManager.skip();
         break;
       case 'back-sim-button':
+      case 'sim-info-back':
         SimManager.back();
         break;
       case 'unlock-sim-button':
         Navigation.skipped = false;
         SimManager.unlock();
+        break;
+      case 'unlock-sim-back':
+        SimManager.simUnlockBack();
+        break;
+      case 'sim-info-forward':
+        SimManager.finish();
         break;
       case 'sim-import-button':
         // Needed to give the browser the opportunity to properly refresh the UI
@@ -345,8 +373,9 @@ var UIManager = {
 
   updateSetting: function ui_updateSetting(name, value) {
     var settings = window.navigator.mozSettings;
-    if (!name || !settings)
+    if (!name || !settings) {
       return;
+    }
     var cset = {}; cset[name] = value;
     settings.createLock().set(cset);
   },
@@ -367,8 +396,7 @@ var UIManager = {
       return;
     }
 
-    var dateLabel = document.getElementById('this.dateConfigurationLabel');
-     // Current time
+    // Current time
     var now = new Date();
     // Format: 2012-09-01
     var currentDate = this.dateConfiguration.value;
@@ -402,11 +430,15 @@ var UIManager = {
   },
 
   setTimeZone: function ui_stz(timezone) {
-    var utc = 'UTC' + timezone.utcOffset;
+    var utcOffset = timezone.utcOffset;
     document.getElementById('time_zone_overlay').className =
-      utc.replace(/[+:]/g, '');
-    document.getElementById('time-zone-title').textContent =
-      utc + ' ' + timezone.id;
+      utcOffset.replace(/[+:]/g, '');
+    var timezoneTitle = document.getElementById('time-zone-title');
+    navigator.mozL10n.localize(timezoneTitle, 'timezoneTitle', {
+      utcOffset: utcOffset,
+      region: timezone.region,
+      city: timezone.city
+    });
     document.getElementById('tz-region-label').textContent = timezone.region;
     document.getElementById('tz-city-label').textContent = timezone.city;
 

@@ -2,8 +2,7 @@
 
 var _;
 var TAG_OPTIONS;
-var COMMS_APP_ORIGIN = document.location.protocol + '//' +
-  document.location.host;
+var COMMS_APP_ORIGIN = location.origin;
 var asyncScriptsLoaded;
 
 // Scale ratio for different devices
@@ -37,6 +36,14 @@ var Contacts = (function() {
   var contactsForm;
 
   var customTag, customTagReset, tagDone, tagCancel, lazyLoadedTagsDom = false;
+
+  // Shows the edit form for the current contact being in an update activity
+  // It receives an array of two elements with the facebook data && values
+  function showEditForm(facebookData, params) {
+    contactsForm.render(currentContact, goToForm,
+                                    facebookData, params['fromUpdateActivity']);
+    showApp();
+  }
 
   var checkUrl = function checkUrl() {
     var hasParams = window.location.hash.split('?');
@@ -82,11 +89,22 @@ var Contacts = (function() {
                 if ('extras' in params) {
                   addExtrasToContact(params['extras']);
                 }
-                contactsForm.render(currentContact, goToForm,
-                                    null, params['fromUpdateActivity']);
-                showApp();
+                if (fb.isFbContact(savedContact)) {
+                  var fbContact = new fb.Contact(savedContact);
+                  var req = fbContact.getDataAndValues();
+                  req.onsuccess = function() {
+                    showEditForm(req.result, params);
+                  };
+                  req.onerror = function() {
+                    console.error('Error retrieving FB information');
+                    showEditForm(null, params);
+                  };
+                }
+                else {
+                  showEditForm(null, params);
+                }
               }, function onError() {
-                console.log('Error retrieving contact to be edited');
+                console.error('Error retrieving contact to be edited');
                 contactsForm.render(null, goToForm);
                 showApp();
               });
@@ -103,6 +121,10 @@ var Contacts = (function() {
           }
           showApp();
         });
+        break;
+      case 'home':
+        navigation.home();
+        showApp();
         break;
       default:
         showApp();
@@ -156,16 +178,22 @@ var Contacts = (function() {
         {type: 'faxHome', value: _('faxHome')},
         {type: 'faxOffice', value: _('faxOffice')},
         {type: 'faxOther', value: _('faxOther')},
-        {type: 'another', value: _('another')}
+        {type: 'other', value: _('other')}
       ],
       'email-type' : [
         {type: 'personal', value: _('personal')},
         {type: 'home', value: _('home')},
-        {type: 'work', value: _('work')}
+        {type: 'work', value: _('work')},
+        {type: 'other', value: _('other')}
       ],
       'address-type' : [
+        {type: 'current', value: _('current')},
         {type: 'home', value: _('home')},
         {type: 'work', value: _('work')}
+      ],
+      'date-type': [
+        {type: 'birthday', value: _('birthday')},
+        {type: 'anniversary', value: _('anniversary')}
       ]
     };
   };
@@ -177,7 +205,9 @@ var Contacts = (function() {
     window.addEventListener('asyncScriptsLoaded', function onAsyncLoad() {
       asyncScriptsLoaded = true;
       window.removeEventListener('asyncScriptsLoaded', onAsyncLoad);
-      contactsList.initAlphaScroll();
+      if (contactsList) {
+        contactsList.initAlphaScroll();
+      }
       checkUrl();
 
       PerformanceTestingHelper.dispatch('init-finished');
@@ -192,6 +222,17 @@ var Contacts = (function() {
     initContainers();
     initEventListeners();
     window.addEventListener('hashchange', checkUrl);
+
+    // If the migration is not complete
+    var config = utils.cookie.load();
+    if (!config || !config.fbMigrated) {
+      LazyLoader.load('js/fb/datastore_migrator.js', function() {
+        new DatastoreMigration().start();
+      });
+    }
+    else {
+      window.console.info('FB Already migrated!!!');
+    }
   };
 
   var initContactsList = function initContactsList() {
@@ -248,7 +289,7 @@ var Contacts = (function() {
           }
           return;
         }
-        contactsDetails.render(currentContact, TAG_OPTIONS);
+        contactsDetails.render(currentContact, TAG_OPTIONS, currentFbContact);
         if (contacts.Search && contacts.Search.isInSearchMode()) {
           navigation.go('view-contact-details', 'go-deeper-search');
         } else {
@@ -275,14 +316,14 @@ var Contacts = (function() {
         data['tel'] = [{
           'value': phoneNumber,
           'carrier': null,
-          'type': TAG_OPTIONS['phone-type'][0].type
+          'type': [TAG_OPTIONS['phone-type'][0].type]
         }];
       }
       if (params.hasOwnProperty('email')) {
         var email = params['email'];
         data['email'] = [{
           'value': email,
-          'type': TAG_OPTIONS['email-type'][0].type
+          'type': [TAG_OPTIONS['email-type'][0].type]
         }];
       }
       var hash = '#view-contact-form?extras=' +
@@ -306,6 +347,8 @@ var Contacts = (function() {
       background = 'url(' + URL.createObjectURL(photo) + ')';
     }
     dest.style.backgroundImage = background;
+    // Only for testing purposes
+    dest.dataset.photoReady = 'true';
   };
 
   // Checks if an object fields are empty, by empty means
@@ -336,6 +379,13 @@ var Contacts = (function() {
     var selectedTagType = contactTag.dataset.taglist;
     var options = TAG_OPTIONS[selectedTagType];
 
+    var type = selectedTagType.split('-')[0];
+    var isCustomTagVisible = (document.querySelector(
+      '[data-template]' + '.' + type + '-' +
+      'template').dataset.custom != 'false');
+
+    options = ContactsTag.filterTags(type, contactTag, options);
+
     if (!customTag) {
       customTag = document.querySelector('#custom-tag');
       customTag.addEventListener('keydown', handleCustomTag);
@@ -357,7 +407,13 @@ var Contacts = (function() {
     for (var i in options) {
       options[i].value = _(options[i].type);
     }
+
     ContactsTag.setCustomTag(customTag);
+    // Set whether the custom tag is visible or not
+    // This is needed for dates as we only support bday and anniversary
+    // and not custom dates
+    ContactsTag.setCustomTagVisibility(isCustomTagVisible);
+
     ContactsTag.fillTagOptions(tagsList, contactTag, options);
 
     navigation.go('view-select-tag', 'right-left');
@@ -383,13 +439,15 @@ var Contacts = (function() {
   };
 
   var sendSms = function sendSms(number) {
-    if (!ActivityHandler.currentlyHandling)
+    if (!ActivityHandler.currentlyHandling ||
+        ActivityHandler.activityName === 'open')
       SmsIntegration.sendSms(number);
   };
 
   var callOrPick = function callOrPick(number) {
     LazyLoader.load('/dialer/js/mmi.js', function mmiLoaded() {
-      if (ActivityHandler.currentlyHandling) {
+      if (ActivityHandler.currentlyHandling &&
+          ActivityHandler.activityName !== 'open') {
         ActivityHandler.postPickSuccess({ number: number });
       } else if (MmiManager.isMMI(number)) {
         // For security reasons we cannot directly call MmiManager.send(). We
@@ -401,7 +459,7 @@ var Contacts = (function() {
             number: number
           }
         });
-      } else {
+      } else if (navigator.mozTelephony) {
         TelephonyHelper.call(number);
       }
     });
@@ -436,7 +494,10 @@ var Contacts = (function() {
     });
   };
 
-  var handleCustomTag = function handleCustomTag() {
+  var handleCustomTag = function handleCustomTag(ev) {
+    if (ev.keyCode === 13) {
+      ev.preventDefault();
+    }
     ContactsTag.touchCustomTag();
   };
 
@@ -448,24 +509,18 @@ var Contacts = (function() {
   };
 
   var sendEmailOrPick = function sendEmailOrPick(address) {
-    if (ActivityHandler.currentlyHandling) {
-      // Placeholder for the email app if we want to
-      // launch contacts to select an email address.
-      // So far we do nothing
-    } else {
-      try {
-        // We don't check the email format, lets the email
-        // app do that
-        var activity = new MozActivity({
-          name: 'new',
-          data: {
-            type: 'mail',
-            URI: 'mailto:' + address
-          }
-        });
-      } catch (e) {
-        console.log('WebActivities unavailable? : ' + e);
-      }
+    try {
+      // We don't check the email format, lets the email
+      // app do that
+      var activity = new MozActivity({
+        name: 'new',
+        data: {
+          type: 'mail',
+          URI: 'mailto:' + address
+        }
+      });
+    } catch (e) {
+      console.log('WebActivities unavailable? : ' + e);
     }
   };
 
@@ -497,11 +552,14 @@ var Contacts = (function() {
       callback();
     } else {
       initDetails(function onDetails() {
-        Contacts.view('Form', function viewLoaded() {
-          formReady = true;
-          contactsForm = contacts.Form;
-          contactsForm.init(TAG_OPTIONS);
-          callback();
+        LazyLoader.load(['/contacts/js/utilities/image_thumbnail.js'],
+        function() {
+          Contacts.view('Form', function viewLoaded() {
+            formReady = true;
+            contactsForm = contacts.Form;
+            contactsForm.init(TAG_OPTIONS);
+            callback();
+          });
         });
       });
     }
@@ -723,12 +781,11 @@ var Contacts = (function() {
           currentContact.id == event.contactID) {
           contactsList.getContactById(event.contactID,
             function success(contact, enrichedContact) {
-            currentContact = contact;
-            var mergedContact = enrichedContact || contact;
-            contactsDetails.render(mergedContact, false,
-                                   enrichedContact ? true : false);
-            contactsList.refresh(mergedContact, checkPendingChanges,
-                                 event.reason);
+              currentContact = contact;
+              var mergedContact = enrichedContact || contact;
+              contactsDetails.render(mergedContact, null, enrichedContact);
+              contactsList.refresh(mergedContact, checkPendingChanges,
+                                   event.reason);
           });
         } else {
           contactsList.refresh(event.contactID, checkPendingChanges,

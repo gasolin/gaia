@@ -2,6 +2,7 @@
 'use strict';
 
 var DEFAULT_PARAMS = {
+    id: '0',
     totalBytes: 1800,
     currentBytes: 100,
     url: 'http://firefoxos.com/archivo.mp3',
@@ -9,11 +10,13 @@ var DEFAULT_PARAMS = {
     state: 'downloading',
     contentType: 'audio/mpeg',
     startTime: new Date(),
-    id: 1
+    error: null
   };
 
 function MockDownload(params) {
   params = params || {};
+
+  this.id = params.id || '0';
   this.totalBytes = params.totalBytes || DEFAULT_PARAMS.totalBytes;
   this.currentBytes = params.currentBytes || DEFAULT_PARAMS.currentBytes;
   this.url = params.url || DEFAULT_PARAMS.url;
@@ -21,32 +24,18 @@ function MockDownload(params) {
   this.state = params.state || DEFAULT_PARAMS.state;
   this.contentType = params.contentType || DEFAULT_PARAMS.contentType;
   this.startTime = params.startTime || DEFAULT_PARAMS.startTime;
-  this.id = params.id || DEFAULT_PARAMS.id;
+  this.error = params.error || DEFAULT_PARAMS.error;
 }
 
-MockAttachment.prototype = {
-  get totalBytes() {
-    return this.totalBytes;
+MockDownload.prototype = {
+  pause: function() {
+    return {
+      then: function() {}
+    };
   },
-  get currentBytes() {
-    return this.currentBytes;
-  },
-  get url() {
-    return this.url;
-  },
-  get path() {
-    return this.path;
-  },
-  get state() {
-    return this.state;
-  },
-  get contentType() {
-    return this.contentType;
-  },
-  get startTime() {
-    return this.startTime;
-  },
-  cancel: function() {},
-  pause: function() {},
-  resume: function() {}
+  resume: function() {
+    return {
+      then: function() {}
+    };
+  }
 };

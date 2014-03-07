@@ -1,6 +1,7 @@
 /* exported SimCardManager */
 /* global Template, SimUIModel,
-   SimSettingsHelper, MobileOperator, SimCardManager */
+   SimSettingsHelper, MobileOperator, SimCardManager,
+   AirplaneModeHelper, localize */
 
 'use strict';
 
@@ -8,7 +9,8 @@
 
   // track used constants here
   const EMPTY_OPTION_TEXT = '--';
-  const EMPTY_OPTION_VALUE = '-1';
+  const EMPTY_OPTION_VALUE = '-2';
+  const ALWAYS_ASK_OPTION_VALUE = '-1';
 
   var _ = window.navigator.mozL10n.get;
 
@@ -20,9 +22,9 @@
    */
   var SimCardManager = {
     init: function() {
-
       // we store all SimUIModel instances into this array
       this.simcards = [];
+      this.isAirplaneMode = false;
 
       // init DOM related stuffs
       this.setAllElements();
@@ -33,50 +35,30 @@
       this.simManagerOutgoingMessagesSelect.addEventListener('change', this);
       this.simManagerOutgoingDataSelect.addEventListener('change', this);
 
-      // TODO
-      // if we support hot plugging in the future,
-      // we have to register `onicccardchange` event to handle its state here
+      this.addVoiceChangeEventOnConns();
+      this.addCardStateChangeEventOnIccs();
 
-      // init needed cardInfo
+      // because in fugu, airplaneMode will not change cardState
+      // but we still have to make UI consistent. In this way,
+      // when airplaneMode is on in fugu, we have to mimic the nosim
+      // situation in single sim.
+      this.addAirplaneModeChangeEvent();
+
+      // init UI
+      this.isAirplaneMode =
+        AirplaneModeHelper.getStatus() === 'enabled' ? true : false;
       this.initSimCardsInfo();
-
-      // render basic UI
       this.initSimCardManagerUI();
     },
     initSimCardsInfo: function() {
       var conns = window.navigator.mozMobileConnections;
-      var iccManager = window.navigator.mozIccManager;
 
-      for (var i = 0; i < conns.length; i++) {
-        var conn = conns[i];
+      for (var cardIndex = 0; cardIndex < conns.length; cardIndex++) {
+        var conn = conns[cardIndex];
         var iccId = conn.iccId;
-        var simcard = new SimUIModel(i);
-
-        // if this mobileConnection has no simcard on it
-        if (!iccId) {
-          simcard.setState('nosim');
-        } else {
-          // else if we can get mobileConnection,
-          // we have to check locked / enabled state
-          var icc = iccManager.getIccById(iccId);
-          var iccInfo = icc.iccInfo;
-          var cardState = icc.cardState;
-          var operatorInfo = MobileOperator.userFacingInfo(conn);
-
-          if (this.isSimCardLocked(cardState)) {
-            simcard.setState('locked');
-          } else {
-            // TODO:
-            // we have to call Gecko API here to make sure the
-            // simcard is enabled / disabled
-            simcard.setState('normal', {
-              number: iccInfo.msisdn || '',
-              operator: operatorInfo.operator || _('no-operator')
-            });
-          }
-        }
-
+        var simcard = new SimUIModel(cardIndex);
         this.simcards.push(simcard);
+        this.updateCardState(cardIndex, iccId);
       }
     },
     handleEvent: function(evt) {
@@ -158,12 +140,14 @@
       var elementsId = [
         'sim-card-container',
         'sim-card-tmpl',
+        'sim-manager-security-entry',
+        'sim-manager-security-desc',
         'sim-manager-outgoing-call-select',
         'sim-manager-outgoing-call-desc',
         'sim-manager-outgoing-messages-select',
         'sim-manager-outgoing-messages-desc',
         'sim-manager-outgoing-data-select',
-        'sim-manager-outgoing-data-desc'
+        'sim-manager-outgoing-data-desc-new'
       ];
       var toCamelCase = function toCamelCase(str) {
         return str.replace(/\-(.)/g, function(str, p1) {
@@ -182,6 +166,7 @@
       // we only inject basic DOM from templates before
       // , so we have to map UI to its info
       this.updateSimCardsUI();
+      this.updateSimSecurityUI();
     },
     initSimCardsUI: function() {
       var simItemHTMLs = [];
@@ -195,6 +180,21 @@
       }.bind(this));
 
       this.simCardContainer.innerHTML = simItemHTMLs.join('');
+    },
+    updateSimSecurityUI: function() {
+      var firstCardInfo = this.simcards[0].getInfo();
+      var secondCardInfo = this.simcards[1].getInfo();
+
+      // if we don't have any card available right now
+      // or if we are in airplane mode
+      if (firstCardInfo.absent && secondCardInfo.absent ||
+        this.isAirplaneMode) {
+          this.simManagerSecurityEntry.setAttribute('aria-disabled', true);
+          localize(this.simManagerSecurityDesc, 'noSimCard');
+      } else {
+        this.simManagerSecurityEntry.setAttribute('aria-disabled', false);
+        localize(this.simManagerSecurityDesc);
+      }
     },
     initSelectOptionsUI: function() {
 
@@ -236,15 +236,6 @@
           // we have to set defaultId to available card automatically
           // and disable select/option
           selectedCardIndex = firstCardInfo.absent ? 1 : 0;
-
-          SimSettingsHelper.setServiceOnCard('outgoingCall',
-            selectedCardIndex);
-
-          SimSettingsHelper.setServiceOnCard('outgoingMessages',
-            selectedCardIndex);
-
-          SimSettingsHelper.setServiceOnCard('outgoingData',
-            selectedCardIndex);
         }
 
         // for these two situations, they all have to be disabled
@@ -280,6 +271,18 @@
 
         selectDOM.add(option);
       });
+
+      // we will add `always ask` option these two select
+      if (storageKey === 'outgoingCall' || storageKey === 'outgoingMessages') {
+        var option = document.createElement('option');
+        option.value = ALWAYS_ASK_OPTION_VALUE;
+        localize(option, 'sim-manager-always-ask');
+
+        if (ALWAYS_ASK_OPTION_VALUE == selectedCardIndex) {
+          option.selected = true;
+        }
+        selectDOM.add(option);
+      }
     },
     isSimCardLocked: function(cardState) {
 
@@ -293,6 +296,98 @@
 
       // make sure the card is in locked mode or not
       return lockedState.indexOf(cardState) !== -1;
+    },
+    addVoiceChangeEventOnConns: function() {
+      var conns = window.navigator.mozMobileConnections;
+      for (var i = 0; i < conns.length; i++) {
+        var iccId = conns[i].iccId;
+        conns[i].addEventListener('voicechange',
+          this.updateCardStateWithUI.bind(this, i, iccId));
+      }
+    },
+    addCardStateChangeEventOnIccs: function() {
+      var conns = window.navigator.mozMobileConnections;
+      var iccManager = window.navigator.mozIccManager;
+      for (var i = 0; i < conns.length; i++) {
+        var iccId = conns[i].iccId;
+        var icc = iccManager.getIccById(iccId);
+        if (icc) {
+          this.addChangeEventOnIccByIccId(iccId);
+        }
+      }
+    },
+    addChangeEventOnIccByIccId: function(iccId) {
+      var self = this;
+      var icc = window.navigator.mozIccManager.getIccById(iccId);
+      if (icc) {
+        icc.addEventListener('cardstatechange', function() {
+          var cardIndex = self.getCardIndexByIccId(iccId);
+          self.updateCardStateWithUI(cardIndex, iccId);
+        });
+      }
+    },
+    addAirplaneModeChangeEvent: function() {
+      var self = this;
+      AirplaneModeHelper.addEventListener('statechange', function(state) {
+        // we only want to handle these two states
+        if (state === 'enabled' || state === 'disabled') {
+          var enabled = (state === 'enabled') ? true : false;
+          self.isAirplaneMode = enabled;
+          self.updateCardsState();
+          self.updateSimCardsUI();
+          self.updateSimSecurityUI();
+        }
+      });
+    },
+    updateCardsState: function() {
+      var conns = window.navigator.mozMobileConnections;
+      for (var cardIndex = 0; cardIndex < conns.length; cardIndex++) {
+        var iccId = conns[cardIndex].iccId;
+        this.updateCardState(cardIndex, iccId);
+      }
+    },
+    updateCardState: function(cardIndex, iccId) {
+      var iccManager = window.navigator.mozIccManager;
+      var conn = window.navigator.mozMobileConnections[cardIndex];
+      var simcard = this.simcards[cardIndex];
+
+      if (!iccId || this.isAirplaneMode) {
+        simcard.setState('nosim');
+      } else {
+        // else if we can get mobileConnection,
+        // we have to check locked / enabled state
+        var icc = iccManager.getIccById(iccId);
+        var iccInfo = icc.iccInfo;
+        var cardState = icc.cardState;
+        var operatorInfo = MobileOperator.userFacingInfo(conn);
+
+        if (this.isSimCardLocked(cardState)) {
+          simcard.setState('locked');
+        } else {
+          // TODO:
+          // we have to call Gecko API here to make sure the
+          // simcard is enabled / disabled
+          simcard.setState('normal', {
+            number: iccInfo.msisdn || iccInfo.mdn || '',
+            operator: operatorInfo.operator || _('no-operator')
+          });
+        }
+      }
+    },
+    updateCardStateWithUI: function(cardIndex, iccId) {
+      this.updateCardState(cardIndex, iccId);
+      this.updateSimCardUI(cardIndex);
+      this.updateSimSecurityUI();
+    },
+    getCardIndexByIccId: function(iccId) {
+      var conns = window.navigator.mozMobileConnections;
+      var cardIndex;
+      for (var i = 0; i < conns.length; i++) {
+        if (conns[i].iccId == iccId) {
+          cardIndex = i;
+        }
+      }
+      return cardIndex;
     }
   };
 
