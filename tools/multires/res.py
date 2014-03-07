@@ -85,6 +85,7 @@ def get_shared_res():
                  res_path = os.path.join(r,files);
                  res.append(res_path)
                  if '@' in res_path:
+                    print 'find ' + res_path
                     splits = res_path.split('@')
                     tmp = splits[1]
                     key = splits[1].split('x')[0]+'x'
