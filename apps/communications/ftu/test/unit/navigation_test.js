@@ -1,5 +1,6 @@
 'use strict';
 
+requireApp('communications/ftu/js/external_links.js');
 requireApp('communications/ftu/js/navigation.js');
 
 requireApp('communications/ftu/test/unit/mock_l10n.js');
@@ -25,21 +26,22 @@ requireApp('communications/ftu/test/unit/mock_navigation.html.js');
 mocha.globals(['open']);
 
 var _;
-var mocksHelperForNavigation = new MocksHelper([
-  'utils',
-  'UIManager',
-  'SimManager',
-  'DataMobile',
-  'OperatorVariant',
-  'IccHelper',
-  'Tutorial',
-  'SdManager',
-  'ImportIntegration',
-  'WifiManager',
-  'WifiUI'
-]).init();
+
 
 suite('navigation >', function() {
+  var mocksHelperForNavigation = new MocksHelper([
+    'utils',
+    'UIManager',
+    'SimManager',
+    'DataMobile',
+    'OperatorVariant',
+    'IccHelper',
+    'Tutorial',
+    'SdManager',
+    'ImportIntegration',
+    'WifiManager',
+    'WifiUI'
+  ]).init();
   var mocksHelper = mocksHelperForNavigation;
   var isOnLine = true;
   var realOnLine,
@@ -78,6 +80,7 @@ suite('navigation >', function() {
     MockIccHelper.setProperty('cardState', 'ready');
 
     mocksHelper.suiteSetup();
+
     Navigation.init();
   });
 
@@ -106,7 +109,16 @@ suite('navigation >', function() {
     Navigation.manageStep(callback);
   };
 
+  teardown(function() {
+    Navigation.simMandatory = false;
+    Navigation.fxaEnabled = false;
+  });
+
   test('navigates forward', function() {
+    MockIccHelper.setProperty('cardState', 'ready');
+    Navigation.simMandatory = true;
+    Navigation.fxaEnabled = true;
+
     setStepState(1);
     for (var i = Navigation.currentStep; i < numSteps; i++) {
       Navigation.forward();
@@ -117,6 +129,8 @@ suite('navigation >', function() {
   });
 
   test('navigates backwards', function() {
+    Navigation.simMandatory = true;
+    Navigation.fxaEnabled = true;
     setStepState(numSteps);
     // The second step isn't mandatory.
     for (var i = Navigation.currentStep; i > 2; i--) {
@@ -143,8 +157,14 @@ suite('navigation >', function() {
     };
 
     setup(function() {
-      MockIccHelper.setProperty('cardstate', 'ready');
+      MockIccHelper.setProperty('cardState', 'ready');
       Navigation.simMandatory = false;
+      Navigation.fxaEnabled = true;
+    });
+
+    teardown(function() {
+      Navigation.simMandatory = false;
+      Navigation.fxaEnabled = false;
     });
 
     test('languages screen >', function(done) {
@@ -210,18 +230,30 @@ suite('navigation >', function() {
       observer.observe(UIManager.mainTitle, observerConfig);
     });
 
-    test('welcome screen >', function(done) {
+    test('firefox accounts screen >', function(done) {
       setStepState(7);
       var observer = new MutationObserver(function() {
         observer.disconnect();
+        assert.equal(UIManager.mainTitle.innerHTML, _('firefox-accounts'));
+        done();
+      });
+      observer.observe(UIManager.mainTitle, observerConfig);
+    });
+
+    test('welcome screen >', function(done) {
+      setStepState(8);
+      var observer = new MutationObserver(function() {
+        observer.disconnect();
         assert.equal(UIManager.mainTitle.innerHTML, _('aboutBrowser'));
+        var linkRef = document.getElementById('external-link-privacy');
+        assert.equal(linkRef.textContent, '<a>learn-more-privacy-link</a>');
         done();
       });
       observer.observe(UIManager.mainTitle, observerConfig);
     });
 
     test('privacy screen >', function(done) {
-      setStepState(8);
+      setStepState(9);
       var observer = new MutationObserver(function() {
         observer.disconnect();
         assert.equal(UIManager.mainTitle.innerHTML, _('aboutBrowser'));
@@ -304,11 +336,13 @@ suite('navigation >', function() {
 
     setup(function() {
       Navigation.simMandatory = true;
+      Navigation.fxaEnabled = true;
       setStepState(1);
     });
 
     teardown(function() {
       Navigation.simMandatory = false;
+      Navigation.fxaEnabled = true;
     });
 
     test('without SIM card', function() {

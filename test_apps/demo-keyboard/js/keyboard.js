@@ -1,5 +1,8 @@
 'use strict';
 
+/* global KeyboardLayoutManager, KeyboardTouchHandler,
+         InputField, ShiftKey, AutoCorrect, Settings, Settings, KeyEvent,
+         DoubleSpace */
 (function(exports) {
   /**
    * KeyboardApp is the starting module of the app itself.
@@ -8,7 +11,9 @@
    */
   function KeyboardApp() {
     this._started = false;
-  };
+  }
+
+  KeyboardApp.prototype.DEBUG = false;
 
   /**
    * Start the KeyboardApp instance. Attach event listeners and respond
@@ -26,17 +31,29 @@
 
     window.addEventListener('resize', this);
     navigator.mozInputMethod.addEventListener('inputcontextchange', this);
+    window.addEventListener('mozvisibilitychange', this);
+
     this.container =
       document.getElementById(this.KEYBOARD_CONTAINER_ID);
     this.container.addEventListener('mousedown', this);
 
-    this.layout = new KeyboardLayout(englishLayout);
+    window.addEventListener('hashchange', this);
 
-    // XXX should be new and started here
-    this.touchHandler = KeyboardTouchHandler;
-    // XXX should be new and started here
+    this.layoutManager = new KeyboardLayoutManager(this);
+    this.layoutManager.start();
+
+    // Get layout name
+    this.currentLayoutName = window.location.hash.substring(1);
+    this.layoutManager.load(this.currentLayoutName);
+
+    this.touchHandler = new KeyboardTouchHandler();
+    this.touchHandler.start();
+
     this.inputField = new InputField();
     this.inputField.start();
+
+    this.doubleSpace = new DoubleSpace(this);
+    this.doubleSpace.start();
 
     this.shiftKey = new ShiftKey(this);
     this.shiftKey.start();
@@ -46,30 +63,11 @@
 
     this.settings = new Settings(this.DEFAULT_SETTINGS);
     this.settings.addEventListener('settingschanged', this);
+    this.isShown = false;
 
-    // Start off with the main page
-    this.variant = this.getVariant();
-    this.currentPageView =
-      this.layout.getPageView(this.container, null, this.variant);
-    this.currentPage = this.currentPageView.page;
-
-    // Make it visible
-    this.currentPageView.show();
-
-    // The call to resizeWindow triggers the system app to actually display
-    // the frame that holds the keyboard.
-    this.resizeWindow();
-
-    // Handle events
-    this.touchHandler.setPageView(this.currentPageView);
     this.touchHandler.addEventListener('key', this);
 
     this.inputField.addEventListener('inputfieldchanged', this);
-
-    this.inputcontext = navigator.mozInputMethod.inputcontext;
-    if (!document.mozHidden && this.inputcontext) {
-      this.resizeWindow();
-    }
   };
 
   /**
@@ -94,6 +92,9 @@
     this.inputField.stop();
     this.shiftKey.stop();
     this.autoCorrect.stop();
+    this.doubleSpace.stop();
+    this.touchHandler.stop();
+    this.layoutManager.stop();
 
     this.inputcontext = null;
     this.layout = undefined;
@@ -106,7 +107,18 @@
     this.inputField = null;
     this.shiftKey = null;
     this.autoCorrect = null;
+    this.doubleSpace = null;
     this.settings = null;
+    this.layoutManager = null;
+    this.isShown = false;
+    this.currentLayoutName = '';
+  };
+
+  KeyboardApp.prototype.debug = function debug(msg) {
+    if (this.DEBUG) {
+      console.log('[KeyboardApp]' +
+        Array.slice(arguments).concat());
+    }
   };
 
   /**
@@ -115,6 +127,7 @@
    * @memberof KeyboardApp.prototype
    */
   KeyboardApp.prototype.handleEvent = function(evt) {
+    this.debug('handleEvent: ' + evt.type);
     switch (evt.type) {
       case 'key':
         this.handleKey(evt.detail);
@@ -136,13 +149,23 @@
         break;
 
       case 'resize':
-        this.resizeWindow();
+        if (this.isShown) {
+          this.resizeWindow();
+        }
         break;
 
       case 'inputcontextchange':
         this.inputcontext = navigator.mozInputMethod.inputcontext;
-        this.resizeWindow();
+        this.show();
+        break;
 
+      case 'mozvisibilitychange':
+        this.show();
+        break;
+
+      case 'hashchange':
+        this.currentLayoutName = window.location.hash.substring(1);
+        this.layoutManager.load(this.currentLayoutName);
         break;
     }
   };
@@ -205,8 +228,9 @@
    */
   KeyboardApp.prototype.handleKey = function handleKey(keyname) {
     var key = this.currentPage.keys[keyname];
-    if (!key)
+    if (!key) {
       return;
+    }
 
     switch (key.keycmd) {
       case 'sendkey':
@@ -246,8 +270,9 @@
   KeyboardApp.prototype.handleInputFieldChanged =
     function handleInputFieldChanged() {
       var newvariant = this.getVariant();
-      if (newvariant === this.variant)
+      if (newvariant === this.variant) {
         return;
+      }
 
       console.log('variant changed to', newvariant);
 
@@ -255,8 +280,9 @@
       var newPageView = this.layout.getPageView(this.container,
                                                 this.currentPage.name,
                                                 this.variant);
-      if (newPageView === this.currentPageView)
+      if (newPageView === this.currentPageView) {
         return;
+      }
 
       console.log('pageview changed to',
                   newPageView.page.name, newPageView.page.variant);
@@ -322,52 +348,53 @@
     this.currentPageView.resize();
   };
 
+  /**
+   * Show the keyboard only when:
+   *  1. It is visible.
+   *  2. It got a valid input context.
+   * @memberof KeyboardApp.prototype
+   */
+  KeyboardApp.prototype.show = function show() {
+    // Also check if the layout defintion is ready yet.
+    var currentLayout = this.layoutManager.getLayout(this.currentLayoutName);
+
+    if (!document.mozHidden && this.inputcontext && currentLayout) {
+      this.resizeWindow();
+      this.isShown = true;
+    } else {
+      this.isShown = false;
+    }
+  };
+
+  KeyboardApp.prototype.changeLayout = function changeLayout(layoutName) {
+    this.layout = this.layoutManager.getLayout(layoutName);
+
+    // Start off with the main page
+    this.variant = this.getVariant();
+
+    var previousPageView = this.currentPageView;
+    this.currentPageView =
+      this.layout.getPageView(this.container, null, this.variant);
+    this.currentPage = this.currentPageView.page;
+
+    // Make it visible
+    this.currentPageView.show();
+
+    // Hide the previous pageview
+    if (previousPageView) {
+      previousPageView.hide();
+    }
+
+    // Handle events
+    this.touchHandler.setPageView(this.currentPageView);
+  };
+
+  KeyboardApp.prototype.handleLayoutLoaded =
+    function handleLayoutLoaded(layoutName) {
+      this.changeLayout(layoutName);
+      this.inputcontext = navigator.mozInputMethod.inputcontext;
+      this.show();
+    };
+
   exports.KeyboardApp = KeyboardApp;
 }(window));
-
-var englishLayout = {
-  name: 'english',
-  label: 'English',
-  pages: {
-    main: {
-      layout: [
-        'q w e r t y u i o p',
-        'a s d f g h j k l',
-        'SHIFT z x c v b n m BACKSPACE',
-        '?123 SWITCH SPACE . RETURN'
-      ],
-      variants: {
-        email: [
-          'q w e r t y u i o p',
-          'a s d f g h j k l _',
-          'SHIFT z x c v b n m BACKSPACE',
-          '?123 SWITCH @ SPACE . RETURN'
-        ],
-        url: [
-          'q w e r t y u i o p',
-          'a s d f g h j k l :',
-          'SHIFT z x c v b n m BACKSPACE',
-          '?123 SWITCH SPACE . RETURN'
-        ]
-      }
-    },
-    NUMBERS: 'inherit',  // Use the built-in number and symbol pages
-    SYMBOLS: 'inherit'
-  },
-
-  keys: {
-    '.': {
-      alternatives: ', ? ! ; :'
-    },
-    q: { alternatives: '1' },
-    w: { alternatives: '2' },
-    e: { alternatives: '3 é è' },
-    r: { alternatives: '4' },
-    t: { alternatives: '5' },
-    y: { alternatives: '6' },
-    u: { alternatives: '7' },
-    i: { alternatives: '8' },
-    o: { alternatives: '9' },
-    p: { alternatives: '0' }
-  }
-};

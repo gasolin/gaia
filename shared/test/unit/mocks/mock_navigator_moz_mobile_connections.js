@@ -14,7 +14,8 @@
         'voicechange': [],
         'iccinfochange': [],
         'radiostatechange': [],
-        'datachange': []
+        'datachange': [],
+        'cfstatechange': []
       };
       radioEnabledReq = {};
     }
@@ -40,8 +41,8 @@
         if (typeof callback === 'function') {
           callback(evt);
         } else if (typeof callback == 'object' &&
-                   typeof callback['handleEvent'] === 'function') {
-          callback['handleEvent'](evt);
+                   typeof callback.handleEvent === 'function') {
+          callback.handleEvent(evt);
         }
       });
 
@@ -88,8 +89,9 @@
     }
 
     function _mRemoveMobileConnection(index) {
-      if (!_mobileConnections.length)
+      if (!_mobileConnections.length) {
         return;
+      }
 
       if (index) {
         _mobileConnections.splice(index, 1);

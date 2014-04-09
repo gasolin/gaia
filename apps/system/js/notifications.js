@@ -81,9 +81,12 @@ var NotificationScreen = {
     window.addEventListener('utilitytrayshow', this);
     window.addEventListener('unlock', this.clearLockScreen.bind(this));
     window.addEventListener('visibilitychange', this);
-    window.addEventListener('appforeground', this.handleAppopen.bind(this));
     window.addEventListener('ftuopen', this);
     window.addEventListener('ftudone', this);
+    window.addEventListener('appforeground',
+      this.clearDesktopNotifications.bind(this));
+    window.addEventListener('appopened',
+      this.clearDesktopNotifications.bind(this));
 
     this._sound = 'style/notifications/ringtones/notifier_exclamation.ogg';
 
@@ -147,7 +150,7 @@ var NotificationScreen = {
   },
 
   // TODO: Remove this when we ditch mozNotification (bug 952453)
-  handleAppopen: function ns_handleAppopen(evt) {
+  clearDesktopNotifications: function ns_handleAppopen(evt) {
     var manifestURL = evt.detail.manifestURL,
         selector = '[data-manifest-u-r-l="' + manifestURL + '"]';
 
@@ -287,6 +290,9 @@ var NotificationScreen = {
   },
 
   addNotification: function ns_addNotification(detail) {
+    // LockScreen window may not opened while this singleton got initialized.
+    this.lockScreenContainer = this.lockScreenContainer ||
+      document.getElementById('notifications-lockscreen-container');
     var notificationNode = document.createElement('div');
     notificationNode.className = 'notification';
 
@@ -464,8 +470,12 @@ var NotificationScreen = {
 
     var notifSelector = '[data-notification-id="' + notificationId + '"]';
     var notificationNode = this.container.querySelector(notifSelector);
-    var lockScreenNotificationNode =
-      this.lockScreenContainer.querySelector(notifSelector);
+    this.lockScreenContainer = this.lockScreenContainer ||
+      document.getElementById('notifications-lockscreen-container');
+    if (this.lockScreenContainer) {
+      var lockScreenNotificationNode =
+        this.lockScreenContainer.querySelector(notifSelector);
+    }
 
     if (notificationNode)
       notificationNode.parentNode.removeChild(notificationNode);
@@ -488,6 +498,10 @@ var NotificationScreen = {
   },
 
   clearLockScreen: function ns_clearLockScreen() {
+    // The LockScreenWindow may not be instantiated yet.
+    if (!this.lockScreenContainer) {
+      return;
+    }
     while (this.lockScreenContainer.firstElementChild) {
       var element = this.lockScreenContainer.firstElementChild;
       this.lockScreenContainer.removeChild(element);

@@ -11,7 +11,7 @@ var EvmeManager = (function EvmeManager() {
   var currentWindow = null,
       currentURL = null;
 
-  function addGridItem(params, extra) {
+  function addCollection(params, extra) {
     var item = GridItemsFactory.create({
       'id': params.id || Evme.Utils.uuid(),
       'bookmarkURL': params.originUrl.trim(),
@@ -19,11 +19,29 @@ var EvmeManager = (function EvmeManager() {
       'icon': params.icon,
       'iconable': false,
       'useAsyncPanZoom': params.useAsyncPanZoom,
-      'type': !!params.isCollection ? GridItemsFactory.TYPE.COLLECTION :
-              GridItemsFactory.TYPE.BOOKMARK
+      'type': GridItemsFactory.TYPE.COLLECTION
     });
     GridManager.install(item, params.gridPageOffset, extra);
     GridManager.ensurePagesOverflow(Evme.Utils.NOOP);
+  }
+
+  function addBookmark(params, success) {
+    new MozActivity({
+      name: 'save-bookmark',
+      data: {
+        type: 'url',
+        url: params.originUrl.trim(),
+        name: params.name,
+        icon: params.icon,
+        iconable: false,
+        useAsyncPanZoom: params.useAsyncPanZoom
+      },
+      onsuccess: success,
+      onerror: function(e) {
+        console.warn('Unhandled error from save-bookmark activity: ' +
+                     e.target.error.message + '\n');
+      }
+    });
   }
 
   function removeGridItem(params) {
@@ -114,7 +132,7 @@ var EvmeManager = (function EvmeManager() {
 
   /**
    * Returns a list of all Collections names
-   * @param  {bool} lowerCase the name strings
+   * @param {bool} lowerCase the name strings.
    */
   function getCollectionNames(lowerCase) {
     var names = [];
@@ -268,7 +286,8 @@ var EvmeManager = (function EvmeManager() {
     });
 
     activity.onerror = function() {
-      window.open('https://marketplace.firefox.com/app/' + data.slug, 'e.me');
+      window.open('https://marketplace.firefox.com/app/' + data.slug,
+        'e.me', 'dialog');
     };
   }
 
@@ -282,7 +301,7 @@ var EvmeManager = (function EvmeManager() {
 
     activity.onerror = function() {
       window.open('https://marketplace.firefox.com/search/?q=' + data.query,
-                                                                        'e.me');
+        'e.me', 'dialog');
     };
   }
 
@@ -319,7 +338,8 @@ var EvmeManager = (function EvmeManager() {
   }
 
   return {
-    addGridItem: addGridItem,
+    addBookmark: addBookmark,
+    addCollection: addCollection,
     removeGridItem: removeGridItem,
 
     isBookmarked: function isBookmarked(url) {

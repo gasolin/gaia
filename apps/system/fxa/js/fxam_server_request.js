@@ -1,6 +1,8 @@
 /* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- /
 /* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
 
+/* global SettingsHelper, FxaModuleManager, MozActivity */
+
 'use strict';
 
 /*
@@ -20,7 +22,7 @@
 
   function _setAccountDetails(response) {
     if (response && response.user.accountId) {
-      FxaModuleManager.setParam('email', response.user.accountId);
+      FxaModuleManager.setParam('done', true);
       FxaModuleManager.setParam('verified', response.user.verified);
     }
   }
@@ -29,7 +31,7 @@
     window.parent.LazyLoader.load('../js/fxa_client.js', function() {
       callback && callback();
     });
-  };
+  }
 
   var FxModuleServerRequest = {
     checkEmail: function fxmsr_checkEmail(email, onsuccess, onerror) {
@@ -102,4 +104,4 @@
     }
   };
   exports.FxModuleServerRequest = FxModuleServerRequest;
-}(this));
+}(window));

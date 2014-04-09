@@ -556,6 +556,21 @@ Cards = {
     return this._cardStack[this._findCard(query)];
   },
 
+  getCurrentCardType: function() {
+    var result = null,
+        card = this._cardStack[this.activeCardIndex];
+
+    // Favor any _pendingPush value as it is about to
+    // become current, just waiting on an async cycle
+    // to finish. Otherwise use current card value.
+    if (this._pendingPush) {
+      result = this._pendingPush;
+    } else if (card) {
+      result = [card.cardDef.name, card.cardImpl.mode];
+    }
+    return result;
+  },
+
   folderSelector: function(callback) {
     var self = this;
 
@@ -1264,7 +1279,7 @@ FormNavigation.prototype = {
       // element is the last one and the form is valid, submit the form.
       var nextInput = this.focusNextInput(event);
       if (!nextInput && this.options.checkFormValidity()) {
-        this.options.onLast();
+        this.options.onLast(event);
       }
     }
   },

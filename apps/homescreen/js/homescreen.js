@@ -139,20 +139,6 @@ var Homescreen = (function() {
     }
   });
 
-  window.addEventListener('message', function hs_onMessage(event) {
-    if (event.origin === origin) {
-      var message = event.data;
-      LazyLoader.load('js/message.js', function loaded() {
-        switch (message.type) {
-          case Message.Type.ADD_BOOKMARK:
-            var app = new Bookmark(message.data);
-            GridManager.install(app);
-            break;
-        }
-      });
-    }
-  });
-
   function setLocale() {
     // set the 'lang' and 'dir' attributes to <html> when the page is translated
     document.documentElement.lang = navigator.mozL10n.language.code;
@@ -180,9 +166,7 @@ var Homescreen = (function() {
      *
      */
     showAppDialog: function h_showAppDialog(icon) {
-      LazyLoader.load(['shared/style/buttons.css',
-                       'shared/style/headers.css',
-                       'shared/style/confirm.css',
+      LazyLoader.load(['shared/style/confirm.css',
                        'style/request.css',
                        document.getElementById('confirm-dialog'),
                        'js/request.js'], function loaded() {
@@ -194,7 +178,7 @@ var Homescreen = (function() {
       var dialog = document.getElementById('edit-dialog');
       LazyLoader.load(['style/edit_dialog.css',
                        'shared/style/headers.css',
-                       'shared/style/input_areas.css',
+                       'shared/style_unstable/input_areas.css',
                        'shared/js/url_helper.js',
                        dialog,
                        'js/edit_dialog.js'], function loaded() {

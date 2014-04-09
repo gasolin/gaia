@@ -9,7 +9,8 @@ var MarionetteHelper = requireGaia('/tests/js-marionette/helper.js');
 var whitelistedApps = [
   'communications/contacts',
   'clock',
-  'fm'
+  'fm',
+  'sms'
 ];
 
 if (whitelistedApps.indexOf(mozTestInfo.appPath) === -1) {
@@ -58,10 +59,15 @@ marionette('startup event test > ' + mozTestInfo.appPath + ' >', function() {
 
       performanceHelper.observe();
 
-      performanceHelper.waitForPerfEvent(function(runResults) {
-        performanceHelper.reportRunDurations(runResults);
-        assert.ok(Object.keys(runResults).length, 'empty results');
-        app.close();
+      performanceHelper.waitForPerfEvent(function(runResults, error) {
+        if (error) {
+          app.close();
+          throw error;
+        } else {
+          performanceHelper.reportRunDurations(runResults);
+          assert.ok(Object.keys(runResults).length, 'empty results');
+          app.close();
+        }
       });
     });
 

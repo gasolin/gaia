@@ -1,7 +1,8 @@
 /*global Notify, Compose, mocha, MocksHelper, ActivityHandler, Contacts,
-         MessageManager, Attachment, ThreadUI */
+         MessageManager, Attachment, ThreadUI, Settings, Notification,
+         Threads  */
 /*global MockNavigatormozSetMessageHandler, MockNavigatormozApps,
-         MockNavigatorWakeLock, MockOptionMenu, Mockalert,
+         MockNavigatorWakeLock, MockOptionMenu,
          MockMessages, MockNavigatorSettings, MockL10n,
          MockNavigatormozMobileMessage,
          Settings
@@ -22,7 +23,6 @@ requireApp('sms/shared/test/unit/mocks/mock_navigator_moz_settings.js');
 requireApp('sms/shared/test/unit/mocks/mock_settings_url.js');
 
 requireApp('sms/test/unit/mock_l10n.js');
-requireApp('sms/test/unit/mock_alert.js');
 requireApp('sms/test/unit/mock_attachment.js');
 requireApp('sms/test/unit/mock_black_list.js');
 requireApp('sms/test/unit/mock_compose.js');
@@ -53,8 +53,7 @@ var mocksHelperForActivityHandler = new MocksHelper([
   'SettingsURL',
   'Threads',
   'ThreadUI',
-  'Utils',
-  'alert'
+  'Utils'
 ]).init();
 
 suite('ActivityHandler', function() {
@@ -90,6 +89,8 @@ suite('ActivityHandler', function() {
   });
 
   setup(function() {
+    this.sinon.stub(window, 'alert');
+
     MockNavigatormozSetMessageHandler.mSetup();
     ActivityHandler.init();
   });
@@ -111,7 +112,8 @@ suite('ActivityHandler', function() {
   });
 
   suite('"share" activity', function() {
-    var shareActivity;
+    var shareActivity, blobs, names;
+    var arr = [];
 
     setup(function() {
       this.prevHash = window.location.hash;
@@ -120,17 +122,39 @@ suite('ActivityHandler', function() {
         source: {
           name: 'share',
           data: {
-            blobs: [new Blob(), new Blob()],
-            filenames: ['testBlob1', 'testBlob2']
+            blobs: [
+              new Blob(['test'], { type: 'text/plain' }),
+              new Blob(['string'], { type: 'text/plain' }),
+              new Blob(),
+              new Blob(),
+              new Blob()
+            ],
+            filenames: ['testBlob1', 'testBlob2', 'testBlob3', 'testBlob4',
+                        'testBlob5']
           }
         }
       };
-      this.prevAppend = Compose.append;
     });
 
     teardown(function() {
       window.location.hash = this.prevHash;
-      Compose.append = this.prevAppend;
+    });
+
+    test('test for pushing an attachments to an array', function() {
+      blobs = shareActivity.source.data.blobs;
+      names = shareActivity.source.data.filenames;
+      assert.ok(arr.length === 0);
+
+      blobs.forEach(function(blob, idx) {
+        var attachment = new Attachment(blob, {
+          name: names[idx],
+          isDraft: true
+        });
+        arr.push(attachment);
+      });
+      ThreadUI.cleanFields(true);
+      //checks an array length after pushing the data to an array
+      assert.ok(arr.length > 0);
     });
 
     test('modifies the URL "hash" when necessary', function() {
@@ -140,18 +164,45 @@ suite('ActivityHandler', function() {
     });
 
     test('Appends an attachment to the Compose field for each media file',
-      function(done) {
-      this.sinon.stub(Compose, 'append', function(attachment) {
-
-        assert.instanceOf(attachment, Attachment);
-        assert.ok(Compose.append.callCount < 3);
-
-        if (Compose.append.callCount === 2) {
-          done();
-        }
-      });
+      function() {
+      this.sinon.stub(Compose, 'append');
+      window.location.hash = '#new';
 
       MockNavigatormozSetMessageHandler.mTrigger('activity', shareActivity);
+
+      sinon.assert.calledWith(Compose.append, [
+        sinon.match.instanceOf(Attachment),
+        sinon.match.instanceOf(Attachment),
+        sinon.match.instanceOf(Attachment),
+        sinon.match.instanceOf(Attachment),
+        sinon.match.instanceOf(Attachment)
+      ]);
+    });
+
+    test('Attachment size over max mms should not be appended', function() {
+      // Adjust mmsSizeLimitation for verifying alert popup when size over
+      // limitation
+      Settings.mmsSizeLimitation = 1;
+      this.sinon.spy(Compose, 'append');
+      window.location.hash = '#new';
+
+      MockNavigatormozSetMessageHandler.mTrigger('activity', shareActivity);
+      sinon.assert.notCalled(Compose.append);
+      sinon.assert.calledWith(window.alert, 'files-too-large{"n":5}');
+    });
+
+    test('Should append images even when they are big', function() {
+      shareActivity.source.data.blobs = [
+        new Blob(['test'], { type: 'image/jpeg' }),
+      ];
+
+      Settings.mmsSizeLimitation = 1;
+      this.sinon.spy(Compose, 'append');
+      window.location.hash = '#new';
+
+      MockNavigatormozSetMessageHandler.mTrigger('activity', shareActivity);
+      sinon.assert.called(Compose.append);
+      sinon.assert.notCalled(window.alert);
     });
 
     test('share shouldn\'t change the ThreadUI back button', function() {
@@ -246,6 +297,54 @@ suite('ActivityHandler', function() {
         test('launches the app', function() {
           assert.ok(MockNavigatormozApps.mAppWasLaunched);
         });
+      });
+    });
+
+    suite('Close notification', function() {
+      var closeSpy;
+      var isDocumentHidden;
+
+      suiteSetup(function(){
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: function() {
+            return isDocumentHidden;
+          }
+        });
+      });
+
+      suiteTeardown(function(){
+        delete document.hidden;
+      });
+
+      setup(function() {
+        closeSpy = this.sinon.spy(Notification.prototype, 'close');
+        this.sinon.stub(document, 'addEventListener');
+      });
+
+      test('thread view already visible', function() {
+        isDocumentHidden = false;
+        this.sinon.stub(Threads, 'currentId', message.threadId);
+        MockNavigatormozApps.mTriggerLastRequestSuccess();
+        sinon.assert.notCalled(document.addEventListener);
+        sinon.assert.notCalled(closeSpy);
+      });
+
+      test('Not in target thread view', function() {
+        isDocumentHidden = true;
+        MockNavigatormozApps.mTriggerLastRequestSuccess();
+        sinon.assert.notCalled(document.addEventListener);
+        sinon.assert.notCalled(closeSpy);
+      });
+
+      test('In target thread view and view is hidden', function() {
+        isDocumentHidden = true;
+        this.sinon.stub(Threads, 'currentId', message.threadId);
+        MockNavigatormozApps.mTriggerLastRequestSuccess();
+        sinon.assert.called(document.addEventListener);
+        sinon.assert.notCalled(closeSpy);
+        document.addEventListener.yield();
+        sinon.assert.called(closeSpy);
       });
     });
 
@@ -376,21 +475,23 @@ suite('ActivityHandler', function() {
 
     suite('class-0 message', function() {
       setup(function() {
-      var notification = {
-        title: title,
-        body: body,
-        imageURL: 'url?id=' + messageId + '&threadId=' + threadId +
-          '&type=class0',
-        tag: 'threadId:' + threadId,
-        clicked: true
-      };
+        var notification = {
+          title: title,
+          body: body,
+          imageURL: 'url?id=' + messageId + '&threadId=' + threadId +
+            '&type=class0',
+          tag: 'threadId:' + threadId,
+          clicked: true
+        };
 
-      MockNavigatormozSetMessageHandler.mTrigger('notification', notification);
-      MockNavigatormozApps.mTriggerLastRequestSuccess();
+        MockNavigatormozSetMessageHandler.mTrigger(
+          'notification', notification
+        );
+        MockNavigatormozApps.mTriggerLastRequestSuccess();
       });
 
       test('an alert is displayed', function() {
-        assert.equal(Mockalert.mLastMessage, title + '\n' + body);
+        sinon.assert.calledWith(window.alert, title + '\n' + body);
       });
 
       test('handleMessageNotification is not called', function() {

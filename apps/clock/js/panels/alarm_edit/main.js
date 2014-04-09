@@ -2,9 +2,8 @@
 /* global KeyEvent */
 define(function(require) {
 var Alarm = require('alarm');
-var AlarmList = require('panels/alarm/alarm_list');
-var AlarmManager = require('alarm_manager');
 var ClockView = require('panels/alarm/clock_view');
+var AudioManager = require('audio_manager');
 var FormButton = require('form_button');
 var Sounds = require('sounds');
 var Utils = require('utils');
@@ -19,7 +18,9 @@ var AlarmEdit = function() {
   this.element.innerHTML = html;
   mozL10n.translate(this.element);
   var handleDomEvent = this.handleDomEvent.bind(this);
-  this.on('visibilitychange', this.handleVisibilityChange.bind(this));
+
+  this.element.addEventListener('panel-visibilitychange',
+                                this.handleVisibilityChange.bind(this));
 
   this.selects = {};
   [
@@ -29,7 +30,8 @@ var AlarmEdit = function() {
   }, this);
 
   this.inputs = {
-    name: this.element.querySelector('#alarm-name')
+    name: this.element.querySelector('#alarm-name'),
+    volume: this.element.querySelector('#alarm-volume-input')
   };
 
   this.buttons = {};
@@ -70,6 +72,14 @@ var AlarmEdit = function() {
     }
   });
 
+  // When the system pops up the ValueSelector, it inadvertently
+  // messes with the scrollTop of the current panel. This is a
+  // workaround for bug 981255 until the Edit panel becomes a new
+  // window per bug 922651.
+  this.element.addEventListener('scroll', function() {
+    this.element.scrollTop = 0;
+  }.bind(this));
+
   mozL10n.translate(this.element);
   // When the language changes, the value of 'weekStartsOnMonday'
   // might change. Since that's more than a simple text string, we
@@ -84,6 +94,7 @@ var AlarmEdit = function() {
   this.selects.repeat.addEventListener('change', handleDomEvent);
   this.buttons.delete.addEventListener('click', handleDomEvent);
   this.inputs.name.addEventListener('keypress', this.handleNameInput);
+  this.inputs.volume.addEventListener('change', this);
 
   // If the phone locks during preview, pause the sound.
   // TODO: When this is no longer a singleton, unbind the listener.
@@ -139,7 +150,7 @@ Utils.extend(AlarmEdit.prototype, {
     hour24State: null,
     is12hFormat: false
   },
-  previewRingtonePlayer: null,
+  ringtonePlayer: AudioManager.createAudioPlayer(),
 
   handleNameInput: function(evt) {
     // If the user presses enter on the name label, dismiss the
@@ -181,12 +192,7 @@ Utils.extend(AlarmEdit.prototype, {
         break;
       case this.buttons.done:
         ClockView.show();
-        this.save(function aev_saveCallback(err, alarm) {
-          if (err) {
-            return;
-          }
-          AlarmList.refreshItem(alarm);
-        });
+        this.save();
         break;
       case this.selects.sound:
         switch (evt.type) {
@@ -205,6 +211,10 @@ Utils.extend(AlarmEdit.prototype, {
       case this.selects.repeat:
         this.alarm.repeat = this.buttons.repeat.value;
         break;
+      case this.inputs.volume:
+        // Alarm Volume is applied to all alarms.
+        AudioManager.setAlarmVolume(this.getAlarmVolumeValue());
+        break;
     }
   },
 
@@ -212,7 +222,8 @@ Utils.extend(AlarmEdit.prototype, {
     setTimeout(function() { menu.focus(); }, 10);
   },
 
-  handleVisibilityChange: function aev_show(isVisible) {
+  handleVisibilityChange: function aev_show(evt) {
+    var isVisible = evt.detail.isVisible;
     var alarm;
     if (!isVisible) {
       return;
@@ -230,6 +241,7 @@ Utils.extend(AlarmEdit.prototype, {
     // to be "undefined" rather than "".
     this.element.dataset.id = this.alarm.id || '';
     this.inputs.name.value = this.alarm.label;
+    this.inputs.volume.value = AudioManager.getAlarmVolume();
 
     // Init time, repeat, sound, snooze selection menu.
     this.initTimeSelect();
@@ -263,25 +275,12 @@ Utils.extend(AlarmEdit.prototype, {
   },
 
   previewSound: function aev_previewSound() {
-    var ringtonePlayer = this.previewRingtonePlayer;
-    if (!ringtonePlayer) {
-      this.previewRingtonePlayer = new Audio();
-      ringtonePlayer = this.previewRingtonePlayer;
-    } else {
-      ringtonePlayer.pause();
-    }
-
     var ringtoneName = this.getSoundSelect();
-    var previewRingtone = 'shared/resources/media/alarms/' + ringtoneName;
-    ringtonePlayer.mozAudioChannelType = 'alarm';
-    ringtonePlayer.src = previewRingtone;
-    ringtonePlayer.play();
+    this.ringtonePlayer.playRingtone(ringtoneName);
   },
 
   stopPreviewSound: function aev_stopPreviewSound() {
-    if (this.previewRingtonePlayer) {
-      this.previewRingtonePlayer.pause();
-    }
+    this.ringtonePlayer.pause();
   },
 
   initVibrateSelect: function aev_initVibrateSelect() {
@@ -304,13 +303,16 @@ Utils.extend(AlarmEdit.prototype, {
     return this.buttons.repeat.value;
   },
 
+  getAlarmVolumeValue: function() {
+    return parseFloat(this.inputs.volume.value);
+  },
+
   save: function aev_save(callback) {
-    if (this.element.dataset.id !== '') {
+    if (this.element.dataset.id && this.element.dataset.id !== '') {
       this.alarm.id = parseInt(this.element.dataset.id, 10);
     } else {
       delete this.alarm.id;
     }
-    var error = false;
 
     this.alarm.label = this.inputs.name.value;
 
@@ -320,27 +322,20 @@ Utils.extend(AlarmEdit.prototype, {
     this.alarm.sound = this.getSoundSelect();
     this.alarm.vibrate = this.getVibrateSelect();
     this.alarm.snooze = parseInt(this.getSnoozeSelect(), 10);
+    AudioManager.setAlarmVolume(this.getAlarmVolumeValue());
 
-    if (!error) {
-      this.alarm.cancel();
-      this.alarm.setEnabled(true, function(err, alarm) {
-        if (err) {
-          callback && callback(err, alarm);
-          return;
-        }
-        AlarmList.refreshItem(alarm);
-        AlarmList.banner.show(alarm.getNextAlarmFireTime());
-        AlarmManager.updateAlarmStatusBar();
-        callback && callback(null, alarm);
-      });
-    } else {
-      // error
-      if (callback) {
-        callback(error);
+    this.alarm.cancel();
+
+    this.alarm.setEnabled(true, function(err, alarm) {
+      if (err) {
+        callback && callback(err, alarm);
+        return;
       }
-    }
-
-    return !error;
+      window.dispatchEvent(new CustomEvent('alarm-changed', {
+        detail: { alarm: alarm, showBanner: true }
+      }));
+      callback && callback(null, alarm);
+    });
   },
 
   delete: function aev_delete(callback) {
@@ -349,11 +344,7 @@ Utils.extend(AlarmEdit.prototype, {
       return;
     }
 
-    this.alarm.delete(function aev_delete(err, alarm) {
-      AlarmList.refresh();
-      AlarmManager.updateAlarmStatusBar();
-      callback && callback(err, alarm);
-    });
+    this.alarm.delete(callback);
   }
 
 });

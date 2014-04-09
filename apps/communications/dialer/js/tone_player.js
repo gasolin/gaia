@@ -1,3 +1,7 @@
+/* globals AudioContext */
+
+/* exported TonePlayer */
+
 'use strict';
 
 const kMasterVolume = 0.5;
@@ -8,6 +12,7 @@ const kDecayDuration = 0.025;
 const kReleaseDuration = 0.05;
 
 var TonePlayer = {
+  _audioElement: null,
   _audioContext: null,
   _gainNode: null,
   _playingNodes: [],
@@ -31,8 +36,9 @@ var TonePlayer = {
   },
 
   ensureAudio: function tp_ensureAudio() {
-    if (this._audioContext)
+    if (this._audioContext) {
       return;
+    }
 
     this._audioContext = new AudioContext();
   },
@@ -43,6 +49,33 @@ var TonePlayer = {
   },
 
   /**
+   * Plays a brief, dummy, inaudible but not empty sound. This is used to
+   * prevent glitches and work around AudioContext.currentTime not being set
+   * properly the first time it's used. The provided callback is invoked after
+   * the sound has played. XXX workaround for bug 848954.
+   *
+   * @param {Function} [callback] An optional callback function which will be
+   *        invoked after the sound has been issued for playing.
+   */
+  dummySound: function tp_dummySound(callback) {
+    var context = this._audioContext;
+    var gainNode = context.createGain();
+
+    gainNode.gain.value = 0.001;
+    gainNode.connect(context.destination);
+
+    var oscNode = context.createOscillator();
+
+    oscNode.type = 'sine';
+    oscNode.frequency.value = 1000; // Whatever
+    oscNode.start(0);
+    oscNode.stop(0.005);
+    oscNode.connect(gainNode);
+
+    setTimeout(callback);
+  },
+
+  /**
    * XXX workaround for bug 848954, uses samples instead of the Web Audio API
    * to play short tones. Remove this once the original problem is fixed.
    *
@@ -50,13 +83,16 @@ var TonePlayer = {
    *        will be matched with the appropriate sample
    */
   _playSample: function tp_playSample(frequencies) {
-    var sample = null;
+    if (!this._audioElement) {
+      this._audioElement = new Audio();
+    }
 
+    var sample = this._audioElement;
     for (var i in this._tonesSamples) {
       if ((frequencies.length === 2) &&
           (frequencies[0] === this._tonesSamples[i][0]) &&
           (frequencies[1] === this._tonesSamples[i][1])) {
-        sample = new Audio(i);
+        sample.src = i;
         break;
       }
     }
@@ -112,7 +148,7 @@ var TonePlayer = {
     gainNode.gain.setValueAtTime(duration ? 0.0 : kToneVolume * kMasterVolume,
                                  0.0);
 
-    for (var i = 0; i < frequencies.length; ++i) {
+    for (i = 0; i < frequencies.length; ++i) {
       var oscNode = this._audioContext.createOscillator();
       oscNode.type = 'sine';
       oscNode.frequency.value = frequencies[i];
@@ -175,22 +211,24 @@ var TonePlayer = {
   // - duration
   playSequence: function tp_playSequence(sequence) {
     this.ensureAudio();
-    // AudioContext.currentTime is the last time received on the main thread
-    // from the audio graph.  Trying to start a tone at currentTime will not
-    // start playing until this main thread returns to the event loop and
-    // sends a message to the audio graph thread.  Allow a little time for
-    // this.  The way Gecko processes audio in chunks of 30ms means this
-    // should be at least 60 ms.  Experiments on Buri indicate that in
-    // practice this delay is 165 to 190 ms, much of which is the code that
-    // runs before returning to the event loop.
-    var when = this._audioContext.currentTime + 0.2;
-    for (var index = 0; index < sequence.length; ++index) {
-      var step = sequence[index];
-      var frequencies = step.slice(0, 2);
-      var duration = step[2] / 1000;
-      this._startAt(frequencies, when, duration);
-      when += duration;
-    }
+    this.dummySound((function() {
+      // AudioContext.currentTime is the last time received on the main thread
+      // from the audio graph.  Trying to start a tone at currentTime will not
+      // start playing until this main thread returns to the event loop and
+      // sends a message to the audio graph thread.  Allow a little time for
+      // this.  The way Gecko processes audio in chunks of 30ms means this
+      // should be at least 60 ms.  Experiments on Buri indicate that in
+      // practice this delay is 165 to 190 ms, much of which is the code that
+      // runs before returning to the event loop.
+      var when = this._audioContext.currentTime + 0.2;
+      for (var index = 0; index < sequence.length; ++index) {
+        var step = sequence[index];
+        var frequencies = step.slice(0, 2);
+        var duration = step[2] / 1000;
+        this._startAt(frequencies, when, duration);
+        when += duration;
+      }
+    }).bind(this));
   },
 
   setChannel: function tp_setChannel(channel) {
