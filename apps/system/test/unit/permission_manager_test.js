@@ -95,7 +95,7 @@ suite('system/permission manager', function() {
     });
 
     test('permission-prompt', function() {
-      assert.equal(permissionManager.permissionScreen.dataset.type, 'test');
+      assert.equal(permissionManager.screen.dataset.type, 'test');
       assert.isTrue(permissionManager.handlePermissionPrompt.called);
     });
   });
@@ -158,7 +158,7 @@ suite('system/permission manager', function() {
       sendChromeEvent('permission-prompt', 'test');
       permissionManager.handlePermissionPrompt(detail);
 
-      assert.equal(permissionManager.remember.checked, false);
+      assert.equal(permissionManager.rememberCheckbox.checked, false);
       assert.isTrue(permissionManager.requestPermission.called);
     });
 
@@ -167,7 +167,7 @@ suite('system/permission manager', function() {
       detail.remember = true;
       permissionManager.handlePermissionPrompt(detail);
 
-      assert.equal(permissionManager.remember.checked, true);
+      assert.equal(permissionManager.rememberCheckbox.checked, true);
       assert.isTrue(permissionManager.requestPermission.called);
     });
   });
@@ -211,13 +211,13 @@ suite('system/permission manager', function() {
     });
 
     test('handle pending', function() {
-      permissionManager.remember.checked = true;
+      permissionManager.rememberCheckbox.checked = true;
       permissionManager.clickHandler({target: permissionManager.yes});
       assert.equal(permissionManager.pending.length, 1);
     });
 
     test('dismiss same permissions request from same origin', function() {
-      permissionManager.remember.checked = true;
+      permissionManager.rememberCheckbox.checked = true;
       permissionManager.clickHandler({target: permissionManager.yes});
       assert.isTrue(permissionManager.showNextPendingRequest.called);
       assert.isTrue(permissionManager.dispatchResponse.called);
@@ -266,7 +266,8 @@ suite('system/permission manager', function() {
     });
 
     test('not show remember my choice option', function() {
-      assert.equal(permissionManager.rememberSection.style.display, 'none');
+      assert.equal(permissionManager.rememberSection.style.display,
+        'none');
     });
   });
 
@@ -383,7 +384,7 @@ suite('system/permission manager', function() {
     });
 
     test('remember my choice option is checked in app mode', function() {
-      assert.equal(permissionManager.remember.checked, true);
+      assert.equal(permissionManager.rememberCheckbox.checked, true);
     });
   });
 
@@ -418,7 +419,7 @@ suite('system/permission manager', function() {
     });
 
     test('remember my choice option is unchecked in web mode', function() {
-      assert.equal(permissionManager.remember.checked, false);
+      assert.equal(permissionManager.rememberCheckbox.checked, false);
     });
   });
 

@@ -42,8 +42,10 @@
   }
 
   PermissionManager.prototype = {
+    ELEMENT_PREFIX: 'permission-dialog-',
+
     _fetchElements: function pm_fetchElements() {
-      this.elements = {};
+      // this.elements = {};
 
       var toCamelCase = function toCamelCase(str) {
         return str.replace(/\-(.)/g, function replacer(str, p1) {
@@ -51,51 +53,35 @@
         });
       };
 
-      this.elementClasses = ['permission-screen', 'permission-title',
-        'permission-message', 'permission-more-info',
-        'permission-more-info-link', 'permission-hide-info-link',
-        'permission-more-info-box', 'permission-remember-checkbox',
-        'permission-remember-section', 'permission-devices',
-        'permission-yes', 'permission-no'];
+      this.elementClasses = ['screen', 'title',
+        'message', 'more-info',
+        'more-info-link', 'hide-info-link',
+        'more-info-box',
+        // Remember the choice checkbox
+        'remember-checkbox', 'remember-section',
+        'device-selector', 'devices',
+        // "Yes"/"No" buttons
+        'buttons', 'yes', 'no'];
 
       // Loop and add element with camel style name to Modal Dialog attribute.
       this.elementClasses.forEach(function createElementRef(name) {
-        this.elements[toCamelCase(name)] =
-          this.element.querySelector('.' + this.ELEMENT_PREFIX + name);
-        }, this);
+        var qname = this.ELEMENT_PREFIX + name;
+          this[toCamelCase(name)] = document.getElementById(qname);
+          // this.elements[toCamelCase(name)] =
+          // this.element.querySelector('.' + this.ELEMENT_PREFIX + name);
+      }.bind(this));
     },
     /**
      * start the PermissionManager to init variables and listeners
      * @memberof PermissionManager.prototype
      */
     start: function pm_start() {
-      // Div over in which the permission UI resides.
-      this.permissionScreen = document.getElementById('permission-screen');
-      this.permissionTitle = document.getElementById('permission-title');
-      this.message = document.getElementById('permission-message');
-      this.moreInfo = document.getElementById('permission-more-info');
-      this.moreInfoLink = document.getElementById('permission-more-info-link');
-      this.hideInfoLink = document.getElementById('permission-hide-info-link');
-      this.moreInfoBox = document.getElementById('permission-more-info-box');
+      this._fetchElements();
 
-      // "Yes"/"No" buttons on the permission UI.
-      this.buttons = document.getElementById('permission-buttons');
-      this.yes = document.getElementById('permission-yes');
-      this.no = document.getElementById('permission-no');
-
-      // Remember the choice checkbox
-      this.remember = document.getElementById('permission-remember-checkbox');
-      this.rememberSection =
-        document.getElementById('permission-remember-section');
-      this.deviceSelector =
-        document.getElementById('permission-device-selector');
-      this.devices = document.getElementById('permission-devices');
-
-      var self = this;
       this.rememberSection.addEventListener('click',
         function onLabelClick() {
-        self.remember.checked = !self.remember.checked;
-      });
+        this.rememberCheckbox.checked = !this.rememberCheckbox.checked;
+      }.bind(this));
 
       window.addEventListener('mozChromeEvent', this);
       /* On home/holdhome pressed, discard permission request.
@@ -128,13 +114,13 @@
       this.currentRequestId = null;
 
       this.permissionScreen = null;
-      this.permissionTitle = null;
+      this.title = null;
       this.message = null;
       this.moreInfo = null;
       this.moreInfoLink = null;
       this.moreInfoBox = null;
 
-      this.remember = null;
+      this.rememberCheckbox = null;
       this.rememberSection = null;
       this.deviceSelector = null;
       this.devices = null;
@@ -161,8 +147,8 @@
       this.isCamSelector = false;
 
       //handled in showPermissionPrompt
-      if (this.message.classList.contains('hidden')) {
-        this.message.classList.remove('hidden');
+      if (this.permissionMessage.classList.contains('hidden')) {
+        this.permissionMessage.classList.remove('hidden');
       }
       if (!this.moreInfoBox.classList.contains('hidden')) {
         this.moreInfoBox.classList.add('hidden');
@@ -254,7 +240,7 @@
           this.discardPermissionRequest();
           break;
         case 'fullscreenoriginchange':
-          delete this.permissionScreen.dataset.type;
+          delete this.screen.dataset.type;
           this.handleFullscreenOriginChange(detail);
           break;
       }
@@ -323,9 +309,10 @@
       if ((this.isAudio || this.isVideo) && !detail.isApp &&
         !this.isCamSelector) {
         // gUM always not remember in web mode
-        this.remember.checked = false;
+        this.rememberCheckbox.checked = false;
       } else {
-        this.remember.checked = detail.remember ? true : false;
+        this.rememberCheckbox.checked =
+          detail.rememberCheckbox ? true : false;
       }
 
       var message = '';
@@ -337,16 +324,16 @@
         message = _(permissionID + '-appRequest',
           { 'app': new ManifestHelper(app.manifest).name });
 
-        this.permissionTitle.innerHTML = _('title-app');
+        this.title.innerHTML = _('title-app');
         if (this.isCamSelector) {
-          this.permissionTitle.innerHTML = _('title-cam');
+          this.title.innerHTML = _('title-cam');
         }
         this.deviceSelector.innerHTML = _('perm-camera-selector-appRequest',
             { 'app': new ManifestHelper(app.manifest).name });
       } else { // Web content
         message = _(permissionID + '-webRequest', { 'site': detail.origin });
 
-        this.permissionTitle.innerHTML = _('title-web');
+        this.title.innerHTML = _('title-web');
         this.deviceSelector.innerHTML = _('perm-camera-selector-webRequest',
             { 'site': detail.origin });
       }
@@ -357,11 +344,11 @@
         message, moreInfoText,
         function pm_permYesCB() {
           self.dispatchResponse(detail.id, 'permission-allow',
-            self.remember.checked);
+            self.rememberCheckbox.checked);
         },
         function pm_permNoCB() {
           self.dispatchResponse(detail.id, 'permission-deny',
-            self.remember.checked);
+            self.rememberCheckbox.checked);
       });
     },
     /**
@@ -393,7 +380,7 @@
      * @memberof PermissionManager.prototype
      */
     hidePermissionPrompt: function pm_hidePermissionPrompt() {
-      this.permissionScreen.classList.remove('visible');
+      this.screen.classList.remove('visible');
       this.devices.removeEventListener('click', this);
       this.devices.classList.remove('visible');
       this.currentRequestId = undefined;
@@ -430,11 +417,11 @@
       var request = this.pending.shift();
       // bug 907075 Dismiss continuous same permission request but
       // dispatch mozContentEvent as well if remember is checked
-      if (this.remember.checked) {
+      if (this.rememberCheckbox.checked) {
         if ((this.currentOrigin === request.origin) &&
           (this.permissionType === request.permission)) {
           this.dispatchResponse(request.id, this.responseStatus,
-            this.remember.checked);
+            this.rememberCheckbox.checked);
           return;
         }
       }
@@ -453,10 +440,11 @@
       var callback = null;
       if (evt.target === this.yes && this.yes.callback) {
         callback = this.yes.callback;
-      } else if (evt.target === this.no && this.no.callback) {
+      } else if (evt.target ===
+        this.no && this.no.callback) {
         callback = this.no.callback;
       } else if (evt.target === this.moreInfoLink ||
-                 evt.target === this.hideInfoLink) {
+                 evt.target === this.dideInfoLink) {
         this.toggleInfo();
         return;
       }
@@ -590,7 +578,7 @@
         this.yes.textContent = _('ok');
       }
       // Make the screen visible
-      this.permissionScreen.classList.add('visible');
+      this.screen.classList.add('visible');
     },
 
     /**
