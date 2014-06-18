@@ -8,50 +8,70 @@
    * @requires Applications
    */
   function PermissionManager() {
-  }
-
-  PermissionManager.prototype = {
-
-    currentOrigin: undefined,
-    permissionType: undefined,
-    currentPermissions: undefined,
-    currentChoices: {}, //select choices
-    fullscreenRequest: undefined,
-    isVideo: false,
-    isAudio: false,
+    this.currentOrigin = undefined;
+    this.permissionType = undefined;
+    this.currentPermissions = undefined;
+    this.currentChoices = {}; //select choices
+    this.fullscreenRequest = undefined;
+    this.isVideo = false;
+    this.isAudio = false;
     /**
      * special dialog for camera selection while in app mode and
      * permission is granted
      */
-    isCamSelector: false,
-    responseStatus: undefined,
+    this.isCamSelector = false;
+    this.responseStatus = undefined;
     /**
      * A queue of pending requests. Callers of requestPermission() must be
      * careful not to create an infinite loop!
      */
-    pending: [],
+    this.pending = [];
 
     /**
      * The ID of the next permission request. This is incremented by one
      * on every request, modulo some large number to prevent overflow problems.
      */
-    nextRequestID: 0,
+    this.nextRequestID = 0;
 
     /**
      * The ID of the request currently visible on the screen. This has the value
      * "undefined" when there is no request visible on the screen.
      */
-    currentRequestId: undefined,
+    this.currentRequestId = undefined;
 
+  }
+
+  PermissionManager.prototype = {
+    _fetchElements: function pm_fetchElements() {
+      this.elements = {};
+
+      var toCamelCase = function toCamelCase(str) {
+        return str.replace(/\-(.)/g, function replacer(str, p1) {
+          return p1.toUpperCase();
+        });
+      };
+
+      this.elementClasses = ['permission-screen', 'permission-title',
+        'permission-message', 'permission-more-info',
+        'permission-more-info-link', 'permission-hide-info-link',
+        'permission-more-info-box', 'permission-remember-checkbox',
+        'permission-remember-section', 'permission-devices',
+        'permission-yes', 'permission-no'];
+
+      // Loop and add element with camel style name to Modal Dialog attribute.
+      this.elementClasses.forEach(function createElementRef(name) {
+        this.elements[toCamelCase(name)] =
+          this.element.querySelector('.' + this.ELEMENT_PREFIX + name);
+        }, this);
+    },
     /**
      * start the PermissionManager to init variables and listeners
      * @memberof PermissionManager.prototype
      */
     start: function pm_start() {
       // Div over in which the permission UI resides.
-      this.overlay = document.getElementById('permission-screen');
-      this.dialog = document.getElementById('permission-dialog');
-      this.title = document.getElementById('permission-title');
+      this.permissionScreen = document.getElementById('permission-screen');
+      this.permissionTitle = document.getElementById('permission-title');
       this.message = document.getElementById('permission-message');
       this.moreInfo = document.getElementById('permission-more-info');
       this.moreInfoLink = document.getElementById('permission-more-info-link');
@@ -107,9 +127,8 @@
       this.nextRequestID = null;
       this.currentRequestId = null;
 
-      this.overlay = null;
-      this.dialog = null;
-      this.title = null;
+      this.permissionScreen = null;
+      this.permissionTitle = null;
       this.message = null;
       this.moreInfo = null;
       this.moreInfoLink = null;
@@ -206,7 +225,7 @@
               }
             }
           }
-          this.overlay.dataset.type = this.permissionType;
+          this.permissionScreen.dataset.type = this.permissionType;
 
           if (this.isAudio || this.isVideo) {
             if (!detail.isApp) {
@@ -235,7 +254,7 @@
           this.discardPermissionRequest();
           break;
         case 'fullscreenoriginchange':
-          delete this.overlay.dataset.type;
+          delete this.permissionScreen.dataset.type;
           this.handleFullscreenOriginChange(detail);
           break;
       }
@@ -318,16 +337,16 @@
         message = _(permissionID + '-appRequest',
           { 'app': new ManifestHelper(app.manifest).name });
 
-        this.title.innerHTML = _('title-app');
+        this.permissionTitle.innerHTML = _('title-app');
         if (this.isCamSelector) {
-          this.title.innerHTML = _('title-cam');
+          this.permissionTitle.innerHTML = _('title-cam');
         }
         this.deviceSelector.innerHTML = _('perm-camera-selector-appRequest',
             { 'app': new ManifestHelper(app.manifest).name });
       } else { // Web content
         message = _(permissionID + '-webRequest', { 'site': detail.origin });
 
-        this.title.innerHTML = _('title-web');
+        this.permissionTitle.innerHTML = _('title-web');
         this.deviceSelector.innerHTML = _('perm-camera-selector-webRequest',
             { 'site': detail.origin });
       }
@@ -374,7 +393,7 @@
      * @memberof PermissionManager.prototype
      */
     hidePermissionPrompt: function pm_hidePermissionPrompt() {
-      this.overlay.classList.remove('visible');
+      this.permissionScreen.classList.remove('visible');
       this.devices.removeEventListener('click', this);
       this.devices.classList.remove('visible');
       this.currentRequestId = undefined;
@@ -571,7 +590,7 @@
         this.yes.textContent = _('ok');
       }
       // Make the screen visible
-      this.overlay.classList.add('visible');
+      this.permissionScreen.classList.add('visible');
     },
 
     /**
