@@ -189,8 +189,8 @@
     },
 
     /**
-     * BT APIv2: Watch 'onattributechanged' event from mozBluetooth.defaultAdapter
-     * for updating state information.
+     * BT APIv2: Watch 'onattributechanged' event from
+     * mozBluetooth.defaultAdapter for updating state information.
      *
      * @private
      * @param  {Object} evt event object
@@ -207,7 +207,8 @@
               } else {
                 this.bluetooth.dataset.initializing = 'true';
               }
-              this.setAccessibilityAttributes(this.bluetooth, 'bluetoothButton');
+              this.setAccessibilityAttributes(this.bluetooth,
+                'bluetoothButton');
               break;
             default:
               break;
@@ -242,8 +243,8 @@
           }
 
           // Set to the initializing state to block user interaction until the
-          // operation completes. (unless we are being called for the first time,
-          // where Bluetooth is already initialize
+          // operation completes. (unless we are being called for the first
+          // time, where Bluetooth is already initialize
           if (!btFirstSet) {
             self.bluetooth.dataset.initializing = 'true';
           }
@@ -263,8 +264,10 @@
           }
 
           var _attributeHandler = this._bluetoothAttrChangeHandler.bind(this);
-          window.navigator.mozBluetooth.addEventListener('adapterremoved', () => {
-            window.navigator.mozBluetooth.removeEventListener(_attributeHandler);
+          window.navigator.mozBluetooth.addEventListener('adapterremoved',
+            () => {
+              window.navigator.mozBluetooth
+                .removeEventListener(_attributeHandler);
           });
 
           window.navigator.mozBluetooth.addEventListener('attributechanged',

@@ -88,7 +88,7 @@ var Bluetooth = {
     // when bluetooth is really disabled, emit event to notify QuickSettings
     bluetooth.addEventListener('disabled', function bt_onDisabled() {
       window.dispatchEvent(new CustomEvent('bluetooth-disabled'));
-    };
+    });
 
     // if bluetooth is enabled in booting time, try to get adapter now
     this.initDefaultAdapter();

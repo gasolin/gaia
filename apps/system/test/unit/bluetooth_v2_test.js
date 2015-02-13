@@ -1,23 +1,47 @@
 /* global Bluetooth, Bluetooth2, MockSettingsListener,
    MockNavigatorSettings, MockNavigatormozSetMessageHandler,
-   MockMozBluetooth, MockBTAdapter */
+   MockMozBluetooth, MockBTAdapter, MocksHelper, MockLazyLoader */
 'use strict';
 
 require('/shared/test/unit/mocks/mock_navigator_moz_set_message_handler.js');
 requireApp('system/shared/test/unit/mocks/mock_settings_listener.js');
 requireApp('system/shared/test/unit/mocks/mock_navigator_moz_settings.js');
 require('/shared/test/unit/mocks/mock_navigator_moz_bluetooth_v2.js');
+require('/shared/test/unit/mocks/mock_lazy_loader.js');
 requireApp('system/js/service.js');
+requireApp('system/js/base_module.js');
+requireApp('system/js/base_ui.js');
+requireApp('system/js/base_icon.js');
+requireApp('system/js/bluetooth_icon.js');
+requireApp('system/js/bluetooth_transfer_icon.js');
+requireApp('system/js/bluetooth_headphone_icon.js');
+
+function switchReadOnlyProperty(originObject, propName, targetObj) {
+  Object.defineProperty(originObject, propName, {
+    configurable: true,
+    get: function() { return targetObj; }
+  });
+}
+
+var mocksForBluetooth = new MocksHelper([
+  'SettingsListener',
+  'LazyLoader'
+]).init();
 
 suite('system/bluetooth_v2', function() {
   var realSetMessageHandler;
   var realSettings;
   var realSettingsListener;
   var realMozBluetooth;
+  mocksForBluetooth.attachTestHelpers();
 
   suiteSetup(function(done) {
+    sinon.spy(MockLazyLoader, 'load');
+    MockLazyLoader.mLoadRightAway = true;
+
     realSetMessageHandler = navigator.mozSetMessageHandler;
     navigator.mozSetMessageHandler = MockNavigatormozSetMessageHandler;
+    MockNavigatormozSetMessageHandler.mSetup();
 
     realSettings = navigator.mozSettings;
     navigator.mozSettings = MockNavigatorSettings;
@@ -26,14 +50,8 @@ suite('system/bluetooth_v2', function() {
     window.SettingsListener = MockSettingsListener;
 
     realMozBluetooth = navigator.mozBluetooth;
-    Object.defineProperty(navigator, 'mozBluetooth', {
-      configurable: true,
-      get: function() {
-        return MockMozBluetooth;
-      }
-    });
+    switchReadOnlyProperty(navigator, 'mozBluetooth', MockMozBluetooth);
 
-    MockNavigatormozSetMessageHandler.mSetup();
     requireApp('system/js/bluetooth_v2.js', done);
   });
 
@@ -41,12 +59,7 @@ suite('system/bluetooth_v2', function() {
     MockNavigatormozSetMessageHandler.mTeardown();
     navigator.mozSetMessageHandler = realSetMessageHandler;
     window.SettingsListener = realSettingsListener;
-    Object.defineProperty(navigator, 'mozBluetooth', {
-      configurable: true,
-      get: function() {
-        return realMozBluetooth;
-      }
-    });
+    switchReadOnlyProperty(navigator, 'mozBluetooth', realMozBluetooth);
   });
 
   setup(function() {
@@ -182,6 +195,45 @@ suite('system/bluetooth_v2', function() {
     test('register state', function() {
       assert.ok(Service.registerState.calledWith('isEnabled'));
     });
+
+    // test('Should lazy load icons', function() {
+    //   assert.isTrue(MockLazyLoader.load.calledWith(
+    //     ['js/bluetooth_icon.js',
+    //     'js/bluetooth_transfer_icon.js',
+    //     'js/bluetooth_headphone_icon.js']
+    //   ));
+    // });
+
+    // test('Update bluetooth icon when bluetooth is enabled', function() {
+    //   this.sinon.stub(Bluetooth.icon, 'update');
+    //   MockMozBluetooth.triggerEventListeners('enabled');
+    //   assert.isTrue(Bluetooth.icon.update.called);
+    // });
+
+    // test('Update bluetooth icon when bluetooth is disabled', function() {
+    //   this.sinon.stub(Bluetooth.icon, 'update');
+    //   MockMozBluetooth.triggerEventListeners('disabled');
+    //   assert.isTrue(Bluetooth.icon.update.called);
+    // });
+
+    // test('Update transfer icon on system message', function() {
+    //   this.sinon.stub(Bluetooth.transferIcon, 'update');
+    //   MockNavigatormozSetMessageHandler.mTrigger(
+    //     'bluetooth-opp-transfer-start', {});
+    //   assert.isTrue(Bluetooth.transferIcon.update.called);
+    //   MockNavigatormozSetMessageHandler.mTrigger(
+    //     'bluetooth-opp-transfer-complete', {});
+    //   assert.isTrue(Bluetooth.transferIcon.update.calledTwice);
+    // });
+
+    // test('Update headset icon on adapter notifying', function() {
+    //   this.sinon.stub(Bluetooth.headphoneIcon, 'update');
+    //   MockMozBluetooth.triggerOnGetAdapterSuccess();
+    //   MockBTAdapter.ona2dpstatuschanged({status: true});
+    //   assert.isTrue(Bluetooth.headphoneIcon.update.called);
+    //   MockBTAdapter.ona2dpstatuschanged({status: false});
+    //   assert.isTrue(Bluetooth.headphoneIcon.update.calledTwice);
+    // });
   });
 
   suite('handle Bluetooth states', function() {

@@ -4,7 +4,8 @@
  * diable bluetooth hardware, get bluetooth Adapter, and check target
  * bluetooth profile is connected.
  */
-/* global SettingsListener, Service */
+/* global SettingsListener, Service, LazyLoader, BluetoothIcon,
+          BluetoothTransferIcon, BluetoothHeadphoneIcon */
 /* exported Bluetooth2 */
 (function(exports) {
 
@@ -24,7 +25,7 @@ Bluetooth.prototype = {
    *
    * @type {Boolean} turn on/off the console log
    */
-  _debug: true,
+  _debug: false,
 
   /**
    * Store a reference of the default adapter.
@@ -81,6 +82,12 @@ Bluetooth.prototype = {
         name: profile,
         connected: connected
       }));
+      // if (profile === 'opp' && this.transferIcon) {
+      //   this.transferIcon.update();
+      // }
+      // if (profile === 'a2dp' && this.headphoneIcon) {
+      //   this.headphoneIcon.update();
+      // }
     }
   },
 
@@ -160,6 +167,18 @@ Bluetooth.prototype = {
       this._disableHandler.bind(this));
 
     Service.registerState('isEnabled', this);
+    // LazyLoader.load(['js/bluetooth_icon.js',
+    //                  'js/bluetooth_transfer_icon.js',
+    //                  'js/bluetooth_headphone_icon.js'], function() {
+    //   this.icon = new BluetoothIcon(this);
+    //   this.icon.start();
+    //   this.transferIcon = new BluetoothTransferIcon(this);
+    //   this.transferIcon.start();
+    //   this.headphoneIcon = new BluetoothHeadphoneIcon(this);
+    //   this.headphoneIcon.start();
+    // }.bind(this)).catch(function(err) {
+    //   console.error(err);
+    // });
   },
 
   /**
