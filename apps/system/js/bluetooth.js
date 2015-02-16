@@ -102,11 +102,12 @@ var Bluetooth = {
 
     // when bluetooth is really disabled, emit event to notify QuickSettings
     bluetooth.addEventListener('disabled', function bt_onDisabled() {
-      // if bluetooth is enabled in booting time, try to get adapter now
-      this.initDefaultAdapter();
       self.icon && self.icon.update();
       window.dispatchEvent(new CustomEvent('bluetooth-disabled'));
     });
+
+    // if bluetooth is enabled in booting time, try to get adapter now
+    this.initDefaultAdapter();
 
     /* In file transfering case:
      * since System Message can't be listened in two js files within a app,
@@ -225,6 +226,6 @@ var Bluetooth = {
    * @public
    */
   get isEnabled() {
-    return window.navigator.mozBluetooth.enabled;
+    return this._settingsEnabled;
   }
 };

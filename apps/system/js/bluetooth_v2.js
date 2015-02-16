@@ -82,12 +82,12 @@ Bluetooth.prototype = {
         name: profile,
         connected: connected
       }));
-      // if (profile === 'opp' && this.transferIcon) {
-      //   this.transferIcon.update();
-      // }
-      // if (profile === 'a2dp' && this.headphoneIcon) {
-      //   this.headphoneIcon.update();
-      // }
+      if (profile === 'opp' && this.transferIcon) {
+        this.transferIcon.update();
+      }
+      if (profile === 'a2dp' && this.headphoneIcon) {
+        this.headphoneIcon.update();
+      }
     }
   },
 
@@ -146,6 +146,8 @@ Bluetooth.prototype = {
     // if bluetooth is enabled in booting time, try to get adapter now
     this.debug('init bluetooth adapter');
     this._adapter = this._bluetooth.defaultAdapter;
+    this._adapter.addEventListener('attributechanged',
+      this._bluetoothAdapterAttrChangeHandler.bind(this, this._adapter));
 
     /* In file transfering case:
      * since System Message can't be listened in two js files within a app,
@@ -167,18 +169,18 @@ Bluetooth.prototype = {
       this._disableHandler.bind(this));
 
     Service.registerState('isEnabled', this);
-    // LazyLoader.load(['js/bluetooth_icon.js',
-    //                  'js/bluetooth_transfer_icon.js',
-    //                  'js/bluetooth_headphone_icon.js'], function() {
-    //   this.icon = new BluetoothIcon(this);
-    //   this.icon.start();
-    //   this.transferIcon = new BluetoothTransferIcon(this);
-    //   this.transferIcon.start();
-    //   this.headphoneIcon = new BluetoothHeadphoneIcon(this);
-    //   this.headphoneIcon.start();
-    // }.bind(this)).catch(function(err) {
-    //   console.error(err);
-    // });
+    LazyLoader.load(['js/bluetooth_icon.js',
+                     'js/bluetooth_transfer_icon.js',
+                     'js/bluetooth_headphone_icon.js'], function() {
+      this.icon = new BluetoothIcon(this);
+      this.icon.start();
+      this.transferIcon = new BluetoothTransferIcon(this);
+      this.transferIcon.start();
+      this.headphoneIcon = new BluetoothHeadphoneIcon(this);
+      this.headphoneIcon.start();
+    }.bind(this)).catch(function(err) {
+      console.error(err);
+    });
   },
 
   /**
@@ -273,6 +275,32 @@ Bluetooth.prototype = {
   },
 
   /**
+   * BT APIv2: Watch 'onattributechanged' event from
+   * mozBluetooth.defaultAdapter for updating state information.
+   *
+   * @private
+   * @param  {Object} evt event object
+   */
+  _bluetoothAdapterAttrChangeHandler:
+    function bt__bluetoothAdapterAttrChangeHandler(adapter, evt) {
+      for (var i in evt.attrs) {
+        switch (evt.attrs[i]) {
+          case 'state':
+            if (adapter.state === 'enabled') {
+              this._isEnabled = true;
+              this.icon && this.icon.update();
+            } else if (adapter.state === 'disabled') {
+              this._isEnabled = false;
+              this.icon && this.icon.update();
+            }
+            break;
+          default:
+            break;
+        }
+      }
+  },
+
+  /**
    * Watch 'onattributechanged' event from mozBluetooth for updating default
    * adapter information.
    *
@@ -291,6 +319,8 @@ Bluetooth.prototype = {
           // Usually, it means that we reach new default adapter.
           this._adapter = this._bluetooth.defaultAdapter;
           this._updateProfileStat(this._adapter);
+          this._adapter.addEventListener('attributechanged',
+            this._bluetoothAdapterAttrChangeHandler.bind(this, adapter));
           this.debug('defaultAdapter changed.');
           Promise.resolve(this._adapter);
           break;
