@@ -13,7 +13,22 @@ var BluetoothTransfer = {
   // The first-in-first-out queue maintain each scheduled sending task.
   // Each element is a object for scheduled sending tasks.
   _sendingFilesQueue: [],
-  _debug: false,
+
+  /**
+   * Debug message.
+   *
+   * @type {Boolean} turn on/off the console log
+   */
+  onDebug: false,
+
+  /**
+   * Store a reference of the default adapter.
+   * If the adapter is not availble, no bluetooth operation could be
+   * executed.
+   *
+   * @private
+   */
+  _adapter: null,
 
   get _deviceStorage() {
     return navigator.getDeviceStorage('sdcard');
@@ -53,6 +68,17 @@ var BluetoothTransfer = {
 
     window.addEventListener('bluetooth-sendfile-via-handover',
       this.sendFileViaHandover.bind(this));
+
+    window.addEventListener('bluetooth-available', (evt) => {
+      if (evt.detail.adapter) {
+        this._adapter = evt.detail.adapter;
+        // process
+      }
+    });
+
+    window.addEventListener('bluetooth-unavailable', (evt) => {
+      this._adapter = null;
+    });
 
     Service.registerState('isSendFileQueueEmpty', this);
   },
@@ -97,8 +123,8 @@ var BluetoothTransfer = {
     }.bind(this));
   },
 
-  debug: function bt_debug(msg) {
-    if (!this._debug) {
+  _debug: function bt__debug(msg) {
+    if (!this.onDebug) {
       return;
     }
 
@@ -139,13 +165,13 @@ var BluetoothTransfer = {
     this._sendingFilesQueue.push(sendingFilesSchedule);
     var msg = 'push sending files request in queue, queued length = ' +
               this._sendingFilesQueue.length;
-    this.debug(msg);
+    this._debug(msg);
   },
 
   onReceivingFileConfirmation: function bt_onReceivingFileConfirmation(evt) {
     if (Service.query('NfcHandoverManager.isHandoverInProgress')) {
       // Bypassing confirm dialog while incoming file transfer via NFC Handover
-      this.debug('Incoming file via NFC Handover. Bypassing confirm dialog');
+      this._debug('Incoming file via NFC Handover. Bypassing confirm dialog');
       window.dispatchEvent(new CustomEvent('nfc-transfer-started'));
       this.acceptReceive(evt);
       return;
@@ -217,7 +243,7 @@ var BluetoothTransfer = {
       adapter.confirmReceivingFile(address, false);
     } else {
       var msg = 'Cannot get adapter from system Bluetooth monitor.';
-      this.debug(msg);
+      this._debug(msg);
     }
   },
 
@@ -235,7 +261,7 @@ var BluetoothTransfer = {
           adapter.confirmReceivingFile(address, option);
         } else {
           var msg = 'Cannot get adapter from system Bluetooth monitor.';
-          self.debug(msg);
+          self._debug(msg);
         }
         // Storage is not available, then pop out a prompt with the reason
         if (!isStorageAvailable) {
@@ -328,7 +354,7 @@ var BluetoothTransfer = {
       }, waitConnectionReadyTimeoutTime);
     } else {
       var msg = 'Cannot get adapter from system Bluetooth monitor.';
-      this.debug(msg);
+      this._debug(msg);
     }
   },
 
@@ -450,7 +476,7 @@ var BluetoothTransfer = {
       adapter.stopSendingFile(address);
     } else {
       var msg = 'Cannot get adapter from system Bluetooth monitor.';
-      this.debug(msg);
+      this._debug(msg);
     }
   },
 
@@ -534,7 +560,7 @@ var BluetoothTransfer = {
       // Remove the finished sending task from the queue
       this._sendingFilesQueue.shift();
       msg += this._sendingFilesQueue.length;
-      this.debug(msg);
+      this._debug(msg);
     } else { // The scheduled task is for sent multiple files.
       // Create a report in notification.
       // Record each transferring report.
@@ -562,7 +588,7 @@ var BluetoothTransfer = {
         // Remove the finished sending task from the queue
         this._sendingFilesQueue.shift();
         msg += this._sendingFilesQueue.length;
-        this.debug(msg);
+        this._debug(msg);
       }
     }
   },
@@ -582,7 +608,7 @@ var BluetoothTransfer = {
       var msg = 'failed to get file:' +
                 filePath + getreq.error.name +
                 getreq.error.name;
-      self.debug(msg);
+      self._debug(msg);
     };
 
     getreq.onsuccess = function() {
@@ -608,7 +634,7 @@ var BluetoothTransfer = {
 
       a.onerror = function(e) {
         var msg = 'open activity error:' + a.error.name;
-        self.debug(msg);
+        self._debug(msg);
         switch (a.error.name) {
         case 'NO_PROVIDER':
           UtilityTray.hide();
@@ -626,7 +652,7 @@ var BluetoothTransfer = {
       };
       a.onsuccess = function(e) {
         var msg = 'open activity onsuccess';
-        self.debug(msg);
+        self._debug(msg);
       };
     };
   },
