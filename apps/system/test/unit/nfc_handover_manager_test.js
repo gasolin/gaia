@@ -3,7 +3,8 @@
 /* globals MocksHelper, MockBluetooth, MockBluetoothTransfer,
            MockNavigatorSettings, NDEF, NfcConnectSystemDialog,
            MockL10n, NDEFUtils, BaseModule, MockMozNfc, NfcUtils,
-           MockNavigatormozSetMessageHandler, MockLazyLoader, MockService */
+           MockNavigatormozSetMessageHandler, MockLazyLoader, MockService,
+           Service, MockBTAdapter */
 
 require('/shared/test/unit/mocks/mock_navigator_moz_set_message_handler.js');
 require('/shared/test/unit/mocks/mock_moz_ndefrecord.js');
@@ -17,8 +18,9 @@ requireApp('system/shared/test/unit/mocks/mock_event_target.js');
 requireApp('system/shared/test/unit/mocks/mock_dom_request.js');
 requireApp('system/test/unit/mock_lazy_loader.js');
 requireApp('system/shared/test/unit/mocks/mock_service.js');
-requireApp('system/test/unit/mock_bluetooth_transfer.js');
-requireApp('system/test/unit/mock_bluetooth.js');
+// requireApp('system/test/unit/mock_bluetooth_transfer.js');
+// requireApp('system/test/unit/mock_bluetooth.js');
+require('/shared/test/unit/mocks/mock_navigator_moz_bluetooth_v2.js');
 requireApp('system/test/unit/mock_activity.js');
 requireApp('system/js/nfc_manager_utils.js');
 requireApp('system/js/ndef_utils.js');
@@ -39,10 +41,9 @@ var mocksForNfcUtils = new MocksHelper([
 suite('Nfc Handover Manager Functions', function() {
   var realMozNfc;
   var realMozSettings;
-  var realMozBluetooth;
   var realMozSetMessageHandler;
   var realL10n;
-  var spyDefaultAdapter, spyBluetoothPair;
+  var stubDefaultAdapter, spyBluetoothPair;
   var nfcHandoverManager;
   var settingsCore;
 
@@ -50,16 +51,9 @@ suite('Nfc Handover Manager Functions', function() {
 
   suiteSetup(function() {
     realMozSettings = navigator.mozSettings;
-    realMozBluetooth = navigator.mozBluetooth;
     realMozSetMessageHandler = navigator.mozSetMessageHandler;
     realL10n = navigator.mozL10n;
     realMozNfc = navigator.mozNfc;
-    Object.defineProperty(navigator, 'mozBluetooth', {
-      configurable: true,
-      get: function() {
-        return MockBluetooth;
-      }
-    });
     navigator.mozSettings = MockNavigatorSettings;
     navigator.mozSetMessageHandler = MockNavigatormozSetMessageHandler;
     navigator.mozL10n = MockL10n;
@@ -71,20 +65,18 @@ suite('Nfc Handover Manager Functions', function() {
   suiteTeardown(function() {
     MockNavigatormozSetMessageHandler.mTeardown();
     navigator.mozSettings = realMozSettings;
-    Object.defineProperty(navigator, 'mozBluetooth', {
-      configurable: true,
-      get: function() {
-        return realMozBluetooth;
-      }
-    });
     navigator.mozSetMessageHandler = realMozSetMessageHandler;
     navigator.mozL10n = realL10n;
     navigator.mozNfc = realMozNfc;
   });
 
   setup(function() {
-    spyDefaultAdapter = this.sinon.spy(MockBluetooth, 'getDefaultAdapter');
-    spyBluetoothPair = this.sinon.spy(MockBluetooth.defaultAdapter, 'pair');
+    // spyDefaultAdapter = this.sinon.spy(MockBluetooth, 'getDefaultAdapter');
+    // spyBluetoothPair = this.sinon.spy(MockBluetooth.defaultAdapter, 'pair');
+    stubDefaultAdapter = this.sinon.stub(Service, 'query')
+      //.withArgs('Bluetooth.getAdapter')
+      .returns(MockBTAdapter);
+    spyBluetoothPair = this.sinon.stub(MockBTAdapter, 'pair');
     settingsCore = BaseModule.instantiate('SettingsCore');
     settingsCore.start();
     nfcHandoverManager = BaseModule.instantiate('NfcHandoverManager');
@@ -92,14 +84,14 @@ suite('Nfc Handover Manager Functions', function() {
 
   teardown(function() {
     settingsCore.stop();
-    spyDefaultAdapter.restore();
+    stubDefaultAdapter.restore();
     spyBluetoothPair.restore();
   });
 
-  var invokeBluetoothGetDefaultAdapter = function() {
-    var adapterRequest = spyDefaultAdapter.firstCall.returnValue;
-    adapterRequest.fireSuccess(MockBluetooth.defaultAdapter);
-  };
+  // var invokeBluetoothGetDefaultAdapter = function() {
+  //   var adapterRequest = stubDefaultAdapter.firstCall.returnValue;
+  //   adapterRequest.fireSuccess(MockBluetooth.defaultAdapter);
+  // };
 
   suite('Activity Routing for nfcHandoverManager', function() {
     var activityInjection1;
@@ -178,7 +170,7 @@ suite('Nfc Handover Manager Functions', function() {
     test('Attempts to connect to peer after pairing', function() {
       var spyConnect = this.sinon.spy(nfcHandoverManager, '_doConnect');
 
-      invokeBluetoothGetDefaultAdapter();
+      // invokeBluetoothGetDefaultAdapter();
 
       nfcHandoverManager._doPairing('01:23:45:67:89:AB');
       spyBluetoothPair.firstCall.returnValue.fireSuccess();
@@ -202,7 +194,7 @@ suite('Nfc Handover Manager Functions', function() {
       spySendNDEF = this.sinon.spy(MockMozNfc.MockNFCPeer, 'sendNDEF');
 
       nfcHandoverManager.start();
-      invokeBluetoothGetDefaultAdapter();
+      // invokeBluetoothGetDefaultAdapter();
     });
 
     teardown(function() {
@@ -265,7 +257,7 @@ suite('Nfc Handover Manager Functions', function() {
 
       nfcHandoverManager.sendFileQueue = [];
       nfcHandoverManager.start();
-      invokeBluetoothGetDefaultAdapter();
+      // invokeBluetoothGetDefaultAdapter();
     });
 
     teardown(function() {
@@ -438,7 +430,7 @@ suite('Nfc Handover Manager Functions', function() {
       nfcHandoverManager._doAction(action);
 
       window.dispatchEvent(new CustomEvent('bluetooth-enabled'));
-      invokeBluetoothGetDefaultAdapter();
+      // invokeBluetoothGetDefaultAdapter();
 
       assert.isTrue(action.callback.calledOnce);
       assert.deepEqual(action.args, action.callback.getCall(0).args);
@@ -470,7 +462,7 @@ suite('Nfc Handover Manager Functions', function() {
     var initiateFileTransfer = function() {
       spySendNDEF = sinon.spy(MockMozNfc.MockNFCPeer, 'sendNDEF');
       window.dispatchEvent(new CustomEvent('bluetooth-enabled'));
-      invokeBluetoothGetDefaultAdapter();
+      // invokeBluetoothGetDefaultAdapter();
       nfcHandoverManager.handleFileTransfer(mockFileRequest.peer,
                                             mockFileRequest.blob,
                                             mockFileRequest.requestId);
