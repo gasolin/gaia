@@ -40,7 +40,8 @@
     removeEventListener: mba_removeEventListener,
     confirmReceivingFile: function mba_confirmReceivingFile() {},
     sendFile: function mba_sendFile() {},
-    stopSendingFile: function mba_stopSendingFile() {}
+    stopSendingFile: function mba_stopSendingFile() {},
+    pair: function mba_pair() {}
   };
 
   var mManagerEventListeners = [];

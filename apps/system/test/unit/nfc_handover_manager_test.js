@@ -1,6 +1,6 @@
 'use strict';
 
-/* globals MocksHelper, MockBluetooth, MockBluetoothTransfer,
+/* globals MocksHelper, MockMozBluetooth, MockBluetoothTransfer,
            MockNavigatorSettings, NDEF, NfcConnectSystemDialog,
            MockL10n, NDEFUtils, BaseModule, MockMozNfc, NfcUtils,
            MockNavigatormozSetMessageHandler, MockLazyLoader, MockService,
@@ -18,9 +18,9 @@ requireApp('system/shared/test/unit/mocks/mock_event_target.js');
 requireApp('system/shared/test/unit/mocks/mock_dom_request.js');
 requireApp('system/test/unit/mock_lazy_loader.js');
 requireApp('system/shared/test/unit/mocks/mock_service.js');
-// requireApp('system/test/unit/mock_bluetooth_transfer.js');
+requireApp('system/test/unit/mock_bluetooth_transfer.js');
 // requireApp('system/test/unit/mock_bluetooth.js');
-require('/shared/test/unit/mocks/mock_navigator_moz_bluetooth_v2.js');
+require('/shared/test/unit/mocks/mock_navigator_moz_bluetooth.js');
 requireApp('system/test/unit/mock_activity.js');
 requireApp('system/js/nfc_manager_utils.js');
 requireApp('system/js/ndef_utils.js');
@@ -213,7 +213,7 @@ suite('Nfc Handover Manager Functions', function() {
       // Should send self Bluetooth MAC address in return.
       var OOB = Array.apply([], spySendNDEF.firstCall.args[0][1].payload);
       var myMAC = NDEFUtils.parseMAC(
-        MockBluetooth.defaultAdapter.address);
+        MockBTAdapter.address);
       assert.deepEqual(OOB.slice(2, 8), myMAC);
 
       var ndefPromise = spySendNDEF.returnValues[0];
@@ -224,11 +224,11 @@ suite('Nfc Handover Manager Functions', function() {
     test('_handleHandoverSelect() attempts to pair BT devices', function() {
       var handoverSelect = NDEFUtils.encodeHandoverSelect(mac, cps);
 
-      nfcHandoverManager.bluetooth.enabled = true;
+      MockMozBluetooth.enabled = true;
       nfcHandoverManager._handleHandoverSelect(handoverSelect);
       assert.isTrue(spyPairing.calledOnce);
       assert.equal(mac, spyPairing.firstCall.args[0]);
-      nfcHandoverManager.bluetooth.enabled = false;
+      MockMozBluetooth.enabled = false;
     });
   });
 
@@ -245,7 +245,7 @@ suite('Nfc Handover Manager Functions', function() {
 
     setup(function() {
       MockNavigatormozSetMessageHandler.mSetup();
-      MockBluetooth.enabled = true;
+      MockMozBluetooth.enabled = true;
 
       spySendNDEF = this.sinon.spy(MockMozNfc.MockNFCPeer, 'sendNDEF');
 
@@ -261,7 +261,7 @@ suite('Nfc Handover Manager Functions', function() {
     });
 
     teardown(function() {
-      MockBluetooth.enabled = false;
+      MockMozBluetooth.enabled = false;
       MockService.mIsFileTransferInProgress = false;
 
       spySendNDEF.restore();
@@ -286,7 +286,7 @@ suite('Nfc Handover Manager Functions', function() {
       // default Bluetooth Adapter (it's being sent to a peer).
       var OOB = Array.apply([], spySendNDEF.firstCall.args[0][1].payload);
       var myMAC = NDEFUtils.parseMAC(
-        MockBluetooth.defaultAdapter.address);
+        MockBTAdapter.address);
       assert.deepEqual(OOB.slice(2, 8), myMAC);
 
       assert.isTrue(nfcHandoverManager.isHandoverInProgress());
@@ -400,12 +400,12 @@ suite('Nfc Handover Manager Functions', function() {
 
   suite('Action queuing when Bluetooth disabled', function() {
     setup(function() {
-      MockBluetooth.enabled = false;
+      MockMozBluetooth.enabled = false;
       nfcHandoverManager.start();
     });
 
     teardown(function() {
-      MockBluetooth.enabled = true;
+      MockMozBluetooth.enabled = true;
       nfcHandoverManager.actionQueue.splice(0);
       nfcHandoverManager.stop();
     });
@@ -477,21 +477,21 @@ suite('Nfc Handover Manager Functions', function() {
     test('Send file with BT enabled',
       function() {
 
-      MockBluetooth.enabled = true;
+      MockMozBluetooth.enabled = true;
       initiateFileTransfer();
-      assert.isTrue(MockBluetooth.enabled);
+      assert.isTrue(MockMozBluetooth.enabled);
       finalizeFileTransfer();
-      assert.isTrue(MockBluetooth.enabled);
+      assert.isTrue(MockMozBluetooth.enabled);
     });
 
     test('Send file with BT disabled and empty send file queue',
       function() {
 
-      MockBluetooth.enabled = false;
+      MockMozBluetooth.enabled = false;
       initiateFileTransfer();
       assert.equal(MockNavigatorSettings.mSettings['bluetooth.enabled'],
         true);
-      MockBluetooth.enabled = true;
+      MockMozBluetooth.enabled = true;
 
       finalizeFileTransfer();
 
@@ -503,7 +503,7 @@ suite('Nfc Handover Manager Functions', function() {
     test('Send file with BT disabled and non-empty send file queue',
       function() {
 
-      MockBluetooth.enabled = false;
+      MockMozBluetooth.enabled = false;
       initiateFileTransfer();
       assert.equal(MockNavigatorSettings.mSettings['bluetooth.enabled'],
               true);
@@ -525,12 +525,12 @@ suite('Nfc Handover Manager Functions', function() {
     });
 
     test('Timeout outgoing file transfer', function() {
-      MockBluetooth.enabled = true;
+      MockMozBluetooth.enabled = true;
       var spyCancel = this.sinon.spy(nfcHandoverManager,
                                      '_cancelSendFileTransfer');
 
       initiateFileTransfer();
-      assert.isTrue(MockBluetooth.enabled);
+      assert.isTrue(MockMozBluetooth.enabled);
       this.sinon.clock.tick(nfcHandoverManager.responseTimeoutMillis);
       assert.isTrue(spyCancel.calledOnce);
     });
@@ -539,7 +539,7 @@ suite('Nfc Handover Manager Functions', function() {
       var cps = NDEF.CPS_ACTIVE;
       var mac = '01:23:45:67:89:AB';
       var handoverRequest = NDEFUtils.encodeHandoverRequest(mac, cps);
-      MockBluetooth.enabled = true;
+      MockMozBluetooth.enabled = true;
       var spyCancel = sinon.spy(nfcHandoverManager,
                                 '_cancelIncomingFileTransfer');
       initiateFileTransfer();
