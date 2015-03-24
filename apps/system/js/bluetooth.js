@@ -137,6 +137,11 @@ var Bluetooth = {
     window.addEventListener('request-enable-bluetooth', this);
     window.addEventListener('request-disable-bluetooth', this);
 
+    // expose functions to Service.request
+    Service.register('adapter', this);
+    Service.register('pair', this);
+    Service.register('getPairedDevices', this);
+    // expose functions to Service.query
     Service.registerState('isEnabled', this);
     Service.registerState('getAdapter', this);
     Service.registerState('isOPPProfileConnected', this);
@@ -213,6 +218,67 @@ var Bluetooth = {
     adapter.onscostatuschanged = function bt_scoStatusChanged(evt) {
       self._setProfileConnected('sco', evt.status);
     };
+  },
+
+  /**
+   * Get adapter from bluetooth through promise interface.
+   * Since BTv1 get onenabled event before onadapteradded event,
+   * We need watch if adapter is retrieved.
+   *
+   * @public
+   * @return {Promise} Bluetooth Adapter
+   */
+  adapter: function bt__adapter() {
+    return new Promise((resolve) => {
+      if (this.defaultAdapter !== null) {
+        resolve(this.defaultAdapter);
+      }
+
+      this.watch('defaultAdapter', (id, oldval, newval) => {
+        if (newval !== null) {
+          this.unwatch('defaultAdapter');
+          resolve(newval);
+          return newval;
+        }
+      });
+    });
+  },
+
+  /**
+   * Return device pairing result.
+   *
+   * @public
+   * @param {string} mac target device address
+   * @return {Promise} paired result
+   */
+  pair: function bt__pair(mac) {
+    return new Promise((resolve, reject) => {
+      var req = this._adapter.pair(mac);
+      req.onsuccess = () => {
+        resolve();
+      };
+      req.onerror = () => {
+        reject();
+      };
+    });
+  },
+
+  /**
+   * Return paired devices list.
+   *
+   * @public
+   * @returns {Object[]} sequence of BluetoothDevice
+   */
+  getPairedDevices: function bt__getPairedDevices() {
+    return new Promise((resolve, reject) => {
+      var req = this._adapter.getPairedDevices();
+      req.onsuccess = () => {
+        resolve(req.result);
+      };
+      req.onerror = () => {
+        reject();
+      };
+    });
   },
 
   /**
