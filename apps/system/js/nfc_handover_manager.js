@@ -293,8 +293,8 @@
         if (notFoundCb) {
           notFoundCb();
         }
-      }).catch(() => {
-        this._logVisibly('Cannot get paired devices from adapter.');
+      }).catch((err) => {
+        this._logVisibly('Cannot get paired devices from adapter: ' + err);
       });
     },
 
@@ -336,7 +336,8 @@
         this.debug('Device not yet paired');
         Service.request('Bluetooth:pair', mac).then(() => {
           this._pairSuccess(mac);
-        }).catch(() => {
+        }).catch((err) => {
+          this.debug(err);
           this._pairFail();
         });
       };
@@ -621,17 +622,41 @@
         this._onRequestConnect(btssp);
         return;
       }
-      this._findPairedDevice(btssp.mac, (device) => {
-        if (this._adapter === null) {
-          this._logVisibly('No Bluetooth Adapter');
+      if (this._adapter === null) {
+        this._logVisibly('No Bluetooth Adapter');
+        return;
+      }
+      var connected = false;
+      // Service Class Name: OBEXObjectPush, UUID: 0x1105
+      // Specification: Object Push Profile (OPP)
+      //   NOTE: Used as both Service Class Identifier and Profile.
+      // Allowed Usage: Service Class/Profile
+      // https://www.bluetooth.org/en-us/specification/assigned-numbers/
+      // service-discovery
+      var serviceUuid = '0x1105';
+      var req = this._adapter.getConnectedDevices(serviceUuid);
+      req.onsuccess = () => {
+        if (req.result) {
+          this.debug('got connectedList');
+          var connectedList = req.result;
+          var length = connectedList.length;
+          for (var i = 0; i < length; i++) {
+            if (connectedList[i].address == btssp.mac) {
+              connected = true;
+            }
+          }
+          if (!connected) {
+            this._onRequestConnect(btssp);
+          }
+        } else {
+          this._logVisibly('Can not get connected device result.');
           return;
         }
-        this._adapter.getConnectedDevices(device).onerror = () => {
-          this._onRequestConnect(btssp);
-        };
-      }, () => {
+      };
+      req.onerror = () => {
+        this.debug('Can not check is device connected from adapter.');
         this._onRequestConnect(btssp);
-      });
+      };
     },
 
     /**

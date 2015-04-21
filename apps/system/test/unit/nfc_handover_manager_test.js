@@ -2,7 +2,7 @@
 
 /* globals MocksHelper, MockNavigatorSettings, NDEF, Service,
            MockL10n, NDEFUtils, BaseModule, MockMozNfc, NfcUtils,
-           MockNavigatormozSetMessageHandler,
+           MockNavigatormozSetMessageHandler, MockDOMRequest,
            MockMozBluetooth, MockBTAdapter, NfcConnectSystemDialog */
 require('/shared/test/unit/mocks/mock_navigator_moz_set_message_handler.js');
 require('/shared/test/unit/mocks/mock_moz_ndefrecord.js');
@@ -396,7 +396,6 @@ suite('Nfc Handover Manager Functions', function() {
       this.sinon.spy(NfcConnectSystemDialog.prototype, 'show');
       this.sinon.spy(nfcHandoverManager, '_handleHandoverRequest');
       this.sinon.spy(nfcHandoverManager, '_checkConnected');
-      this.sinon.stub(nfcHandoverManager, '_findPairedDevice');
       nfcHandoverManager.start();
     });
 
@@ -408,12 +407,16 @@ suite('Nfc Handover Manager Functions', function() {
       'simplified pairing record', function() {
         this.sinon.stub(Service, 'query').returns(true);
         this.sinon.spy(nfcHandoverManager, '_handleSimplifiedPairingRecord');
+        this.sinon.stub(MockBTAdapter, 'getConnectedDevices', function() {
+          return new MockDOMRequest();
+        });
+        nfcHandoverManager._adapter = MockBTAdapter;
         nfcHandoverManager.tryHandover(activityInjection2.records,
                                        activityInjection2.peer);
 
         assert.ok(nfcHandoverManager._handleSimplifiedPairingRecord.called);
         assert.ok(nfcHandoverManager._checkConnected.called);
-        assert.ok(nfcHandoverManager._findPairedDevice.called);
+        assert.ok(MockBTAdapter.getConnectedDevices.called);
 
     });
 

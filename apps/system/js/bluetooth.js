@@ -48,6 +48,10 @@ var Bluetooth = {
 
   /* this property store a reference of the default adapter */
   defaultAdapter: null,
+  /* to host single adapter promise for Bluetooth:adapter */
+  _getAdapterPromise: null,
+  /* to resolve adapter request for Bluetooth:adapter */
+  _resolveAdapterPromise: null,
 
   init: function bt_init() {
     if (!window.navigator.mozBluetooth || this._started) {
@@ -101,6 +105,7 @@ var Bluetooth = {
     // when bluetooth is really disabled, emit event to notify QuickSettings
     bluetooth.addEventListener('disabled', function bt_onDisabled() {
       self.icon && self.icon.update();
+      this._getAdapterPromise = null;
       window.dispatchEvent(new CustomEvent('bluetooth-disabled'));
     });
 
@@ -193,6 +198,11 @@ var Bluetooth = {
     var req = bluetooth.getDefaultAdapter();
     req.onsuccess = (evt) => {
       this.defaultAdapter = req.result;
+      // resolve the adapter request
+      if (this._resolveAdapterPromise) {
+        this._resolveAdapterPromise(this.defaultAdapter);
+        this._resolveAdapterPromise = null;
+      }
       this._adapterAvailableHandler(this.defaultAdapter);
     };
   },
@@ -222,26 +232,29 @@ var Bluetooth = {
 
   /**
    * Get adapter from bluetooth through promise interface.
-   * Since BTv1 get onenabled event before onadapteradded event,
+   * XXX: Since BTv1 get onenabled event before onadapteradded event,
    * We need watch if adapter is retrieved.
+   *
+   * _getAdapterPromise is used to make sure we return the same
+   * promise to outter caller.
+   * resolve is cached in _resolveAdapterPromise and will execute
+   * when the adapter is set.
    *
    * @public
    * @return {Promise} Bluetooth Adapter
    */
   adapter: function bt__adapter() {
-    return new Promise((resolve) => {
-      if (this.defaultAdapter !== null) {
-        resolve(this.defaultAdapter);
-      }
-
-      this.watch('defaultAdapter', (id, oldval, newval) => {
-        if (newval !== null) {
-          this.unwatch('defaultAdapter');
-          resolve(newval);
-          return newval;
+    if (!this._getAdapterPromise) {
+      this._getAdapterPromise = new Promise((resolve) => {
+        if (this.defaultAdapter !== null) {
+          resolve(this.defaultAdapter);
         }
+        // cache the resolve and execute when adapter is ready
+        this._resolveAdapterPromise = resolve;
       });
-    });
+    }
+
+    return this._getAdapterPromise;
   },
 
   /**
@@ -258,7 +271,7 @@ var Bluetooth = {
         resolve();
       };
       req.onerror = () => {
-        reject();
+        reject(req.error.name);
       };
     });
   },
@@ -276,7 +289,7 @@ var Bluetooth = {
         resolve(req.result);
       };
       req.onerror = () => {
-        reject();
+        reject(req.error.name);
       };
     });
   },
