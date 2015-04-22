@@ -197,7 +197,8 @@
           Service.query('BluetoothTransfer.isSendFileQueueEmpty')) {
         if (this.bluetoothAutoEnabled) {
           this.debug('Disabling Bluetooth');
-          window.dispatchEvent(new CustomEvent('request-disable-bluetooth'));
+          this.publish('request-disable-bluetooth', this,
+            /* no prefix */ true);
           this.bluetoothAutoEnabled = false;
         }
         this.bluetoothStatusSaved = false;
@@ -232,7 +233,8 @@
         this.debug('Bluetooth: not yet enabled');
         this.actionQueue.push(action);
         if (this.settingsNotified === false) {
-          window.dispatchEvent(new CustomEvent('request-enable-bluetooth'));
+          this.publish('request-enable-bluetooth', this,
+            /* no prefix */ true);
           this.settingsNotified = true;
         }
       } else {
