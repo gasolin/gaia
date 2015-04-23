@@ -444,7 +444,7 @@ Bluetooth.prototype = {
    * We can remove it and use service query once BTv1 is deprecated.
    *
    * @public
-   * @return {Promise} Bluetooth Adapter
+   * @return {Promise} A promise that resolve the Bluetooth Adapter
    */
   adapter: function bt__adapter() {
     return new Promise((resolve, reject) => {
@@ -463,7 +463,8 @@ Bluetooth.prototype = {
    *
    * @public
    * @param {string} mac target device address
-   * @return {Promise} paired result
+   * @return {Promise} A promise that resolve when pair successfully,
+   *                   reject when pair failed
    */
   pair: function bt__pair(mac) {
     return this._adapter.pair(mac);

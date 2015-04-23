@@ -337,44 +337,26 @@
       var notYetPaired = () => {
         this.debug('Device not yet paired');
         Service.request('Bluetooth:pair', mac).then(() => {
-          this._pairSuccess(mac);
+          this.debug('Pairing succeeded');
+          this._clearBluetoothStatus();
+          /*
+           * Bug 979427:
+           * After pairing we connect to the remote device. The only thing we
+           * know here is the MAC address, but the defaultAdapter.connect()
+           * requires a BluetoothDevice argument. So we use _findPairedDevice()
+           * to map the MAC to a BluetoothDevice instance.
+           */
+          this._findPairedDevice(mac, (device) => {
+            this._doConnect(device);
+          });
         }).catch((err) => {
           this.debug(err);
-          this._pairFail();
+          this._logVisibly('Pairing failed');
+          this._restoreBluetoothStatus();
         });
       };
 
       this._findPairedDevice(mac, alreadyPaired, notYetPaired);
-    },
-
-    /**
-     * Handle Bluetooth pairing success.
-     * @param {string} mac MAC address of the peer device
-     * @memberof NfcHandoverManager.prototype
-     */
-    _pairSuccess: function _pairSuccess(mac) {
-      this.debug('Pairing succeeded');
-      this._clearBluetoothStatus();
-      /*
-       * Bug 979427:
-       * After pairing we connect to the remote device. The only thing we
-       * know here is the MAC address, but the defaultAdapter.connect()
-       * requires a BluetoothDevice argument. So we use _findPairedDevice()
-       * to map the MAC to a BluetoothDevice instance.
-       */
-      this._findPairedDevice(mac, (device) => {
-        this._doConnect(device);
-      });
-    },
-
-    /**
-     * Handle Bluetooth pairing fail.
-     * @param {string} mac MAC address of the peer device
-     * @memberof NfcHandoverManager.prototype
-     */
-    _pairFail: function _pairFail() {
-      this._logVisibly('Pairing failed');
-      this._restoreBluetoothStatus();
     },
 
     /**
@@ -631,7 +613,7 @@
       var connected = false;
       // Service Class Name: OBEXObjectPush, UUID: 0x1105
       // Specification: Object Push Profile (OPP)
-      //   NOTE: Used as both Service Class Identifier and Profile.
+      // NOTE: Used as both Service Class Identifier and Profile.
       // Allowed Usage: Service Class/Profile
       // https://www.bluetooth.org/en-us/specification/assigned-numbers/
       // service-discovery

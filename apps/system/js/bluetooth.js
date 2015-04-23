@@ -9,7 +9,7 @@ var Bluetooth = {
 
   _setProfileConnected: function bt_setProfileConnected(profile, connected) {
     var value = this['_' + profile + 'Connected'];
-    if (value != connected) {
+    if (value !== connected) {
       this['_' + profile + 'Connected'] = connected;
 
       // Raise an event for the profile connection changes.
@@ -51,7 +51,7 @@ var Bluetooth = {
   /* to host single adapter promise for Bluetooth:adapter */
   _getAdapterPromise: null,
   /* to resolve adapter request for Bluetooth:adapter */
-  _resolveAdapterPromise: null,
+  _getAdapterPromiseResolve: null,
 
   init: function bt_init() {
     if (!window.navigator.mozBluetooth || this._started) {
@@ -105,7 +105,7 @@ var Bluetooth = {
     // when bluetooth is really disabled, emit event to notify QuickSettings
     bluetooth.addEventListener('disabled', function bt_onDisabled() {
       self.icon && self.icon.update();
-      this._getAdapterPromise = null;
+      self._getAdapterPromise = null;
       window.dispatchEvent(new CustomEvent('bluetooth-disabled'));
     });
 
@@ -196,12 +196,11 @@ var Bluetooth = {
     }
 
     var req = bluetooth.getDefaultAdapter();
-    req.onsuccess = (evt) => {
+    req.onsuccess = () => {
       this.defaultAdapter = req.result;
       // resolve the adapter request
-      if (this._resolveAdapterPromise) {
-        this._resolveAdapterPromise(this.defaultAdapter);
-        this._resolveAdapterPromise = null;
+      if (this._getAdapterPromiseResolve) {
+        this._getAdapterPromiseResolve(this.defaultAdapter);
       }
       this._adapterAvailableHandler(this.defaultAdapter);
     };
@@ -233,27 +232,27 @@ var Bluetooth = {
   /**
    * Get adapter from bluetooth through promise interface.
    * XXX: Since BTv1 get onenabled event before onadapteradded event,
-   * We need watch if adapter is retrieved.
+   * We need to watch if adapter is retrieved.
    *
    * _getAdapterPromise is used to make sure we return the same
    * promise to outter caller.
-   * resolve is cached in _resolveAdapterPromise and will execute
+   * resolve is cached in _getAdapterPromiseResolve and will execute
    * when the adapter is set.
    *
    * @public
-   * @return {Promise} Bluetooth Adapter
+   * @return {Promise} A promise that resolve the Bluetooth Adapter
    */
   adapter: function bt__adapter() {
     if (!this._getAdapterPromise) {
       this._getAdapterPromise = new Promise((resolve) => {
         if (this.defaultAdapter !== null) {
           resolve(this.defaultAdapter);
+        } else {
+          // cache the resolve and execute when adapter is ready
+          this._getAdapterPromiseResolve = resolve;
         }
-        // cache the resolve and execute when adapter is ready
-        this._resolveAdapterPromise = resolve;
       });
     }
-
     return this._getAdapterPromise;
   },
 
@@ -262,7 +261,8 @@ var Bluetooth = {
    *
    * @public
    * @param {string} mac target device address
-   * @return {Promise} paired result
+   * @return {Promise} A promise that resolve when pair successfully,
+   *                   reject when pair failed
    */
   pair: function bt__pair(mac) {
     return new Promise((resolve, reject) => {
