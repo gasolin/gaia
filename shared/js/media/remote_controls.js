@@ -1,3 +1,4 @@
+/* globals BluetoothHelper */
 'use strict';
 
 /**
@@ -77,8 +78,7 @@ var REMOTE_CONTROLS = {
  * @constructor
  */
 function MediaRemoteControls() {
-  this.bluetooth = navigator.mozBluetooth;
-  this.defaultAdapter = null;
+  this._btHelper = null;
   this._commandListeners = {};
   this._isSCOConnected = false;
 
@@ -141,32 +141,16 @@ MediaRemoteControls.prototype._setupBluetooth = function(callback) {
     'media-button', this._commandHandler.bind(this)
   );
 
-  // The bluetooth adapter will be needed to send metadata and play status
-  // when those information are changed.
-  if (this.bluetooth) {
-    this.bluetooth.onadapteradded = initialDefaultAdapter;
-    this.bluetooth.ondisabled = resetDefaultAdapter;
-    // Get the default adapter at start because bluetooth might already enabled.
-    initialDefaultAdapter();
-  } else {
-    console.warn('No mozBluetooth');
-  }
+  // bluetooth will be handled with BluetoothHelper
+  // to send metadata and play status when those information are changed.
+  this._btHelper = new BluetoothHelper();
 
-  function initialDefaultAdapter() {
-    var request = self.bluetooth.getDefaultAdapter();
-    request.onsuccess = configureAdapter;
-    request.onerror = resetDefaultAdapter;
-  }
+  this._btHelper.onrequestmediaplaystatus = playstatusHandler;
+  this._btHelper.ona2dpstatuschanged = a2dpConnectionHandler;
+  this._btHelper.onscostatuschanged = scoConnectionHandler;
 
-  function configureAdapter(event) {
-    self.defaultAdapter = event.target.result;
-    self.defaultAdapter.onrequestmediaplaystatus = playstatusHandler;
-    self.defaultAdapter.ona2dpstatuschanged = a2dpConnectionHandler;
-    self.defaultAdapter.onscostatuschanged = scoConnectionHandler;
-
-    if (callback) {
-      callback();
-    }
+  if (callback) {
+    callback();
   }
 
   function playstatusHandler() {
@@ -196,11 +180,6 @@ MediaRemoteControls.prototype._setupBluetooth = function(callback) {
     else {
       self._commandHandler(AVRCP.PLAY_PRESS);
     }
-  }
-
-  function resetDefaultAdapter() {
-    self.defaultAdapter = null;
-    // Do we need to do anything else?
   }
 };
 
@@ -244,19 +223,11 @@ MediaRemoteControls.prototype._setupIAC = function() {
 // user experience, for more detail, please see:
 // http://en.wikipedia.org/wiki/Bluetooth_protocols
 MediaRemoteControls.prototype.getSCOStatus = function(callback) {
-  if (this.defaultAdapter) {
-    var request = this.defaultAdapter.isScoConnected();
-
-    request.onsuccess = function(event) {
-      callback(event.target.result);
-    };
-
-    request.onerror = function(event) {
-      callback(false);
-    };
-  } else {
+  var onerror = function() {
     callback(false);
-  }
+  };
+
+  this._btHelper.isScoConnected(callback, onerror);
 };
 
 MediaRemoteControls.prototype._postMessage = function(name, value) {
@@ -368,14 +339,12 @@ MediaRemoteControls.prototype.notifyAppInfo = function(info) {
  * @param {Object} metadata
  */
 MediaRemoteControls.prototype.notifyMetadataChanged = function(metadata) {
+  var onsuccess = function() {};
+  var onerror = function() {
+    console.log('Sending Metadata error');
+  };
   // Send the new metadata via bluetooth.
-  if (this.defaultAdapter) {
-    var request = this.defaultAdapter.sendMediaMetaData(metadata);
-
-    request.onerror = function() {
-      console.log('Sending Metadata error');
-    };
-  }
+  this._btHelper.sendMediaMetaData(metadata, onsuccess, onerror);
 
   // Now, send it via IAC.
   this._postMessage('nowplaying', metadata);
@@ -387,20 +356,18 @@ MediaRemoteControls.prototype.notifyMetadataChanged = function(metadata) {
  * @param {Object} status
  */
 MediaRemoteControls.prototype.notifyStatusChanged = function(status) {
-  // Send the new status via bluetooth.
-  if (this.defaultAdapter) {
-    // Don't send the interrupted statuses to the remote client because
-    // they are not the AVRCP statuses.
-    if (status === 'mozinterruptbegin') {
-      return;
-    }
-
-    var request = this.defaultAdapter.sendMediaPlayStatus(status);
-
-    request.onerror = function() {
-      console.log('Sending Playstatus error');
-    };
+  // Don't send the interrupted statuses to the remote client because
+  // they are not the AVRCP statuses.
+  if (status === 'mozinterruptbegin') {
+    return;
   }
+
+  var onsuccess = function() {};
+  var onerror = function() {
+    console.log('Sending Playstatus error');
+  };
+  // Send the new status via bluetooth.
+  this._btHelper.sendMediaPlayStatus(status, onsuccess, onerror);
 
   // Now, send it via IAC.
   this._postMessage('status', status);
