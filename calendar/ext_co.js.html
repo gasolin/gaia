@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: ext/co.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: ext/co.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>!function(e){if("object"==typeof exports&amp;&amp;"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&amp;&amp;define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&amp;&amp;(f=self),f.co=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&amp;&amp;require;if(!u&amp;&amp;a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&amp;&amp;require;for(var o=0;o&lt;r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+
+/**
+ * slice() reference.
+ */
+
+var slice = Array.prototype.slice;
+
+/**
+ * Expose `co`.
+ */
+
+module.exports = co['default'] = co.co = co;
+
+/**
+ * Wrap the given generator `fn` into a
+ * function that returns a promise.
+ * This is a separate function so that
+ * every `co()` call doesn't create a new,
+ * unnecessary closure.
+ *
+ * @param {GeneratorFunction} fn
+ * @return {Function}
+ * @api public
+ */
+
+co.wrap = function (fn) {
+  createPromise.__generatorFunction__ = fn;
+  return createPromise;
+  function createPromise() {
+    return co.call(this, fn.apply(this, arguments));
+  }
+};
+
+/**
+ * Execute the generator function or a generator
+ * and return a promise.
+ *
+ * @param {Function} fn
+ * @return {Promise}
+ * @api public
+ */
+
+function co(gen) {
+  var ctx = this;
+
+  // we wrap everything in a promise to avoid promise chaining,
+  // which leads to memory leak errors.
+  // see https://github.com/tj/co/issues/180
+  return new Promise(function(resolve, reject) {
+    if (typeof gen === 'function') gen = gen.call(ctx);
+    if (!gen || typeof gen.next !== 'function') return resolve(gen);
+
+    onFulfilled();
+
+    /**
+     * @param {Mixed} res
+     * @return {Promise}
+     * @api private
+     */
+
+    function onFulfilled(res) {
+      var ret;
+      try {
+        ret = gen.next(res);
+      } catch (e) {
+        return reject(e);
+      }
+      next(ret);
+    }
+
+    /**
+     * @param {Error} err
+     * @return {Promise}
+     * @api private
+     */
+
+    function onRejected(err) {
+      var ret;
+      try {
+        ret = gen.throw(err);
+      } catch (e) {
+        return reject(e);
+      }
+      next(ret);
+    }
+
+    /**
+     * Get the next value in the generator,
+     * return a promise.
+     *
+     * @param {Object} ret
+     * @return {Promise}
+     * @api private
+     */
+
+    function next(ret) {
+      if (ret.done) return resolve(ret.value);
+      var value = toPromise.call(ctx, ret.value);
+      if (value &amp;&amp; isPromise(value)) return value.then(onFulfilled, onRejected);
+      return onRejected(new TypeError('You may only yield a function, promise, generator, array, or object, '
+        + 'but the following object was passed: "' + String(ret.value) + '"'));
+    }
+  });
+}
+
+/**
+ * Convert a `yield`ed value into a promise.
+ *
+ * @param {Mixed} obj
+ * @return {Promise}
+ * @api private
+ */
+
+function toPromise(obj) {
+  if (!obj) return obj;
+  if (isPromise(obj)) return obj;
+  if (isGeneratorFunction(obj) || isGenerator(obj)) return co.call(this, obj);
+  if ('function' == typeof obj) return thunkToPromise.call(this, obj);
+  if (Array.isArray(obj)) return arrayToPromise.call(this, obj);
+  if (isObject(obj)) return objectToPromise.call(this, obj);
+  return obj;
+}
+
+/**
+ * Convert a thunk to a promise.
+ *
+ * @param {Function}
+ * @return {Promise}
+ * @api private
+ */
+
+function thunkToPromise(fn) {
+  var ctx = this;
+  return new Promise(function (resolve, reject) {
+    fn.call(ctx, function (err, res) {
+      if (err) return reject(err);
+      if (arguments.length > 2) res = slice.call(arguments, 1);
+      resolve(res);
+    });
+  });
+}
+
+/**
+ * Convert an array of "yieldables" to a promise.
+ * Uses `Promise.all()` internally.
+ *
+ * @param {Array} obj
+ * @return {Promise}
+ * @api private
+ */
+
+function arrayToPromise(obj) {
+  return Promise.all(obj.map(toPromise, this));
+}
+
+/**
+ * Convert an object of "yieldables" to a promise.
+ * Uses `Promise.all()` internally.
+ *
+ * @param {Object} obj
+ * @return {Promise}
+ * @api private
+ */
+
+function objectToPromise(obj){
+  var results = new obj.constructor();
+  var keys = Object.keys(obj);
+  var promises = [];
+  for (var i = 0; i &lt; keys.length; i++) {
+    var key = keys[i];
+    var promise = toPromise.call(this, obj[key]);
+    if (promise &amp;&amp; isPromise(promise)) defer(promise, key);
+    else results[key] = obj[key];
+  }
+  return Promise.all(promises).then(function () {
+    return results;
+  });
+
+  function defer(promise, key) {
+    // predefine the key in the result
+    results[key] = undefined;
+    promises.push(promise.then(function (res) {
+      results[key] = res;
+    }));
+  }
+}
+
+/**
+ * Check if `obj` is a promise.
+ *
+ * @param {Object} obj
+ * @return {Boolean}
+ * @api private
+ */
+
+function isPromise(obj) {
+  return 'function' == typeof obj.then;
+}
+
+/**
+ * Check if `obj` is a generator.
+ *
+ * @param {Mixed} obj
+ * @return {Boolean}
+ * @api private
+ */
+
+function isGenerator(obj) {
+  return 'function' == typeof obj.next &amp;&amp; 'function' == typeof obj.throw;
+}
+
+/**
+ * Check if `obj` is a generator function.
+ *
+ * @param {Mixed} obj
+ * @return {Boolean}
+ * @api private
+ */
+function isGeneratorFunction(obj) {
+  var constructor = obj.constructor;
+  if (!constructor) return false;
+  if ('GeneratorFunction' === constructor.name || 'GeneratorFunction' === constructor.displayName) return true;
+  return isGenerator(constructor.prototype);
+}
+
+/**
+ * Check for plain object.
+ *
+ * @param {Mixed} val
+ * @return {Boolean}
+ * @api private
+ */
+
+function isObject(val) {
+  return Object == val.constructor;
+}
+
+},{}]},{},[1])(1)
+});</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Caldav.Xhr.html">Xhr</a></li></ul><h3>Global</h3><ul><li><a href="global.html#_localizeElement">_localizeElement</a></li><li><a href="global.html#_localizeElements">_localizeElements</a></li><li><a href="global.html#a">a</a></li><li><a href="global.html#above">above</a></li><li><a href="global.html#absoluteOffsetTop">absoluteOffsetTop</a></li><li><a href="global.html#addChainableMethod">addChainableMethod</a></li><li><a href="global.html#addMethod">addMethod</a></li><li><a href="global.html#addProperty">addProperty</a></li><li><a href="global.html#arguments">arguments</a></li><li><a href="global.html#assert">assert</a></li><li><a href="global.html#below">below</a></li><li><a href="global.html#buildElement">buildElement</a></li><li><a href="global.html#chromeInteractive">chromeInteractive</a></li><li><a href="global.html#closest">closest</a></li><li><a href="global.html#closeTo">closeTo</a></li><li><a href="global.html#dateFromId">dateFromId</a></li><li><a href="global.html#dateFromTransport">dateFromTransport</a></li><li><a href="global.html#dateToTransport">dateToTransport</a></li><li><a href="global.html#dayOfWeek">dayOfWeek</a></li><li><a href="global.html#dayOfWeekFromMonday">dayOfWeekFromMonday</a></li><li><a href="global.html#dayOfWeekFromStartDay">dayOfWeekFromStartDay</a></li><li><a href="global.html#daysBetween">daysBetween</a></li><li><a href="global.html#deep">deep</a></li><li><a href="global.html#deepEqual">deepEqual</a></li><li><a href="global.html#deepProperty">deepProperty</a></li><li><a href="global.html#deepPropertyNotVal">deepPropertyNotVal</a></li><li><a href="global.html#deepPropertyVal">deepPropertyVal</a></li><li><a href="global.html#doesNotThrow">doesNotThrow</a></li><li><a href="global.html#domLoaded">domLoaded</a></li><li><a href="global.html#empty">empty</a></li><li><a href="global.html#eql">eql</a></li><li><a href="global.html#equal">equal</a></li><li><a href="global.html#exist">exist</a></li><li><a href="global.html#fail">fail</a></li><li><a href="global.html#false">false</a></li><li><a href="global.html#fetchRecord">fetchRecord</a></li><li><a href="global.html#flag">flag</a></li><li><a href="global.html#get">get</a></li><li><a href="global.html#getAllFlags">getAllFlags</a></li><li><a href="global.html#getAllSubcomponents">getAllSubcomponents</a></li><li><a href="global.html#getDayId">getDayId</a></li><li><a href="global.html#getEnumerableProperties">getEnumerableProperties</a></li><li><a href="global.html#getFirstSubcomponent">getFirstSubcomponent</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getMonthId">getMonthId</a></li><li><a href="global.html#getPathValue">getPathValue</a></li><li><a href="global.html#getPort">getPort</a></li><li><a href="global.html#getProperties">getProperties</a></li><li><a href="global.html#getScheme">getScheme</a></li><li><a href="global.html#getUTC">getUTC</a></li><li><a href="global.html#getWeeksDays">getWeeksDays</a></li><li><a href="global.html#getWeekStartDate">getWeekStartDate</a></li><li><a href="global.html#hourDiff">hourDiff</a></li><li><a href="global.html#include">include</a></li><li><a href="global.html#includeMembers">includeMembers</a></li><li><a href="global.html#init">init</a></li><li><a href="global.html#instanceof">instanceof</a></li><li><a href="global.html#instanceOf">instanceOf</a></li><li><a href="global.html#isAllDay">isAllDay</a></li><li><a href="global.html#isArray">isArray</a></li><li><a href="global.html#isBoolean">isBoolean</a></li><li><a href="global.html#isDefined">isDefined</a></li><li><a href="global.html#isFalse">isFalse</a></li><li><a href="global.html#isFunction">isFunction</a></li><li><a href="global.html#isFuture">isFuture</a></li><li><a href="global.html#isNotArray">isNotArray</a></li><li><a href="global.html#isNotBoolean">isNotBoolean</a></li><li><a href="global.html#isNotFunction">isNotFunction</a></li><li><a href="global.html#isNotNull">isNotNull</a></li><li><a href="global.html#isNotNumber">isNotNumber</a></li><li><a href="global.html#isNotObject">isNotObject</a></li><li><a href="global.html#isNotString">isNotString</a></li><li><a href="global.html#isNull">isNull</a></li><li><a href="global.html#isNumber">isNumber</a></li><li><a href="global.html#isObject">isObject</a></li><li><a href="global.html#isOnlyDate">isOnlyDate</a></li><li><a href="global.html#isPast">isPast</a></li><li><a href="global.html#isSameDate">isSameDate</a></li><li><a href="global.html#isString">isString</a></li><li><a href="global.html#isToday">isToday</a></li><li><a href="global.html#isTrue">isTrue</a></li><li><a href="global.html#isUndefined">isUndefined</a></li><li><a href="global.html#itself">itself</a></li><li><a href="global.html#keys">keys</a></li><li><a href="global.html#languagechains">language chains</a></li><li><a href="global.html#least">least</a></li><li><a href="global.html#length">length</a></li><li><a href="global.html#lengthOf">lengthOf</a></li><li><a href="global.html#match">match</a></li><li><a href="global.html#members">members</a></li><li><a href="global.html#monthReady">monthReady</a></li><li><a href="global.html#monthsDayReady">monthsDayReady</a></li><li><a href="global.html#most">most</a></li><li><a href="global.html#not">not</a></li><li><a href="global.html#notDeepEqual">notDeepEqual</a></li><li><a href="global.html#notDeepProperty">notDeepProperty</a></li><li><a href="global.html#notEqual">notEqual</a></li><li><a href="global.html#notInclude">notInclude</a></li><li><a href="global.html#notInstanceOf">notInstanceOf</a></li><li><a href="global.html#notMatch">notMatch</a></li><li><a href="global.html#notOk">notOk</a></li><li><a href="global.html#notProperty">notProperty</a></li><li><a href="global.html#notStrictEqual">notStrictEqual</a></li><li><a href="global.html#notTypeOf">notTypeOf</a></li><li><a href="global.html#null">null</a></li><li><a href="global.html#objDisplay">objDisplay</a></li><li><a href="global.html#observeCalendars">observeCalendars</a></li><li><a href="global.html#ok">ok</a></li><li><a href="global.html#operator">operator</a></li><li><a href="global.html#overwriteChainableMethod">overwriteChainableMethod</a></li><li><a href="global.html#overwriteMethod">overwriteMethod</a></li><li><a href="global.html#overwriteProperty">overwriteProperty</a></li><li><a href="global.html#ownProperty">ownProperty</a></li><li><a href="global.html#pendingReady">pendingReady</a></li><li><a href="global.html#property">property</a></li><li><a href="global.html#propertyNotVal">propertyNotVal</a></li><li><a href="global.html#propertyVal">propertyVal</a></li><li><a href="global.html#relativeDuration">relativeDuration</a></li><li><a href="global.html#relativeOffset">relativeOffset</a></li><li><a href="global.html#relativeState">relativeState</a></li><li><a href="global.html#requirejs">requirejs</a></li><li><a href="global.html#respondTo">respondTo</a></li><li><a href="global.html#sameMembers">sameMembers</a></li><li><a href="global.html#satisfy">satisfy</a></li><li><a href="global.html#spanOfDay">spanOfDay</a></li><li><a href="global.html#spanOfMonth">spanOfMonth</a></li><li><a href="global.html#strictEqual">strictEqual</a></li><li><a href="global.html#string">string</a></li><li><a href="global.html#throw">throw</a></li><li><a href="global.html#throws">throws</a></li><li><a href="global.html#true">true</a></li><li><a href="global.html#type">type</a></li><li><a href="global.html#typeOf">typeOf</a></li><li><a href="global.html#undefined">undefined</a></li><li><a href="global.html#within">within</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0</a> on Thu May 14 2015 15:37:48 GMT+0800 (CST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

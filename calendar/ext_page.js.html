@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: ext/page.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: ext/page.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>
+;(function(){
+
+  /**
+   * Perform initial dispatch.
+   */
+
+  var dispatch = true;
+
+  /**
+   * Base path.
+   */
+
+  var base = '';
+
+  /**
+   * Running flag.
+   */
+
+  var running;
+
+  /**
+   * Register `path` with callback `fn()`,
+   * or route `path`, or `page.start()`.
+   *
+   *   page(fn);
+   *   page('*', fn);
+   *   page('/user/:id', load, user);
+   *   page('/user/' + user.id, { some: 'thing' });
+   *   page('/user/' + user.id);
+   *   page();
+   *
+   * @param {String|Function} path
+   * @param {Function} fn...
+   * @api public
+   */
+
+  function page(path, fn) {
+    // &lt;callback>
+    if ('function' == typeof path) {
+      return page('*', path);
+    }
+
+    // route &lt;path> to &lt;callback ...>
+    if ('function' == typeof fn) {
+      var route = new Route(path);
+      for (var i = 1; i &lt; arguments.length; ++i) {
+        page.callbacks.push(route.middleware(arguments[i]));
+      }
+    // show &lt;path> with [state]
+    } else if ('string' == typeof path) {
+      page.show(path, fn);
+    // start [options]
+    } else {
+      page.start(path);
+    }
+  }
+
+  /**
+   * Callback functions.
+   */
+
+  page.callbacks = [];
+
+  /**
+   * Get or set basepath to `path`.
+   *
+   * @param {String} path
+   * @api public
+   */
+
+  page.base = function(path){
+    if (0 == arguments.length) return base;
+    base = path;
+  };
+
+  /**
+   * Bind with the given `options`.
+   *
+   * Options:
+   *
+   *    - `click` bind to click events [true]
+   *    - `popstate` bind to popstate [true]
+   *    - `dispatch` perform initial dispatch [true]
+   *
+   * @param {Object} options
+   * @api public
+   */
+
+  page.start = function(options){
+    options = options || {};
+    if (running) return;
+    running = true;
+    if (false === options.dispatch) dispatch = false;
+    if (false !== options.popstate) window.addEventListener('popstate', onpopstate, false);
+    if (false !== options.click) window.addEventListener('click', onclick, false);
+    if (!dispatch) return;
+    page.replace(location.pathname + location.search, null, true, dispatch);
+  };
+
+  /**
+   * Unbind click and popstate event handlers.
+   *
+   * @api public
+   */
+
+  page.stop = function(){
+    running = false;
+    removeEventListener('click', onclick, false);
+    removeEventListener('popstate', onpopstate, false);
+  };
+
+  /**
+   * Show `path` with optional `state` object.
+   *
+   * @param {String} path
+   * @param {Object} state
+   * @return {Context}
+   * @api public
+   */
+
+  page.show = function(path, state){
+    var ctx = new Context(path, state);
+    page.dispatch(ctx);
+    if (!ctx.unhandled) ctx.pushState();
+    return ctx;
+  };
+
+  /**
+   * Replace `path` with optional `state` object.
+   *
+   * @param {String} path
+   * @param {Object} state
+   * @return {Context}
+   * @api public
+   */
+
+  page.replace = function(path, state, init, dispatch){
+    var ctx = new Context(path, state);
+    ctx.init = init;
+    if (null == dispatch) dispatch = true;
+    if (dispatch) page.dispatch(ctx);
+    ctx.save();
+    return ctx;
+  };
+
+  /**
+   * Dispatch the given `ctx`.
+   *
+   * @param {Object} ctx
+   * @api private
+   */
+
+  page.dispatch = function(ctx){
+    var i = 0;
+
+    function next() {
+      var fn = page.callbacks[i++];
+      if (!fn) return unhandled(ctx);
+      fn(ctx, next);
+    }
+
+    next();
+  };
+
+  /**
+   * Unhandled `ctx`. When it's not the initial
+   * popstate then redirect. If you wish to handle
+   * 404s on your own use `page('*', callback)`.
+   *
+   * @param {Context} ctx
+   * @api private
+   */
+
+  function unhandled(ctx) {
+    if (window.location.pathname + window.location.search == ctx.canonicalPath) return;
+    page.stop();
+    ctx.unhandled = true;
+    window.location = ctx.canonicalPath;
+  }
+
+  /**
+   * Initialize a new "request" `Context`
+   * with the given `path` and optional initial `state`.
+   *
+   * @param {String} path
+   * @param {Object} state
+   * @api public
+   */
+
+  function Context(path, state) {
+    if ('/' == path[0] &amp;&amp; 0 != path.indexOf(base)) path = base + path;
+    var i = path.indexOf('?');
+    this.canonicalPath = path;
+    this.path = path.replace(base, '') || '/';
+    this.title = document.title;
+    this.state = state || {};
+    this.state.path = path;
+    this.querystring = ~i ? path.slice(i + 1) : '';
+    this.pathname = ~i ? path.slice(0, i) : path;
+    this.params = [];
+  }
+
+  /**
+   * Expose `Context`.
+   */
+
+  page.Context = Context;
+
+  /**
+   * Push state.
+   *
+   * @api private
+   */
+
+  Context.prototype.pushState = function(){
+    history.pushState(this.state, this.title, this.canonicalPath);
+  };
+
+  /**
+   * Save the context state.
+   *
+   * @api public
+   */
+
+  Context.prototype.save = function(){
+    history.replaceState(this.state, this.title, this.canonicalPath);
+  };
+
+  /**
+   * Initialize `Route` with the given HTTP `path`,
+   * and an array of `callbacks` and `options`.
+   *
+   * Options:
+   *
+   *   - `sensitive`    enable case-sensitive routes
+   *   - `strict`       enable strict matching for trailing slashes
+   *
+   * @param {String} path
+   * @param {Object} options.
+   * @api private
+   */
+
+  function Route(path, options) {
+    options = options || {};
+    this.path = path;
+    this.method = 'GET';
+    this.regexp = pathtoRegexp(path
+      , this.keys = []
+      , options.sensitive
+      , options.strict);
+  }
+
+  /**
+   * Expose `Route`.
+   */
+
+  page.Route = Route;
+
+  /**
+   * Return route middleware with
+   * the given callback `fn()`.
+   *
+   * @param {Function} fn
+   * @return {Function}
+   * @api public
+   */
+
+  Route.prototype.middleware = function(fn){
+    var self = this;
+    return function(ctx, next){
+      if (self.match(ctx.path, ctx.params)) return fn(ctx, next);
+      next();
+    }
+  };
+
+  /**
+   * Check if this route matches `path`, if so
+   * populate `params`.
+   *
+   * @param {String} path
+   * @param {Array} params
+   * @return {Boolean}
+   * @api private
+   */
+
+  Route.prototype.match = function(path, params){
+    var keys = this.keys
+      , qsIndex = path.indexOf('?')
+      , pathname = ~qsIndex ? path.slice(0, qsIndex) : path
+      , m = this.regexp.exec(pathname);
+  
+    if (!m) return false;
+
+    for (var i = 1, len = m.length; i &lt; len; ++i) {
+      var key = keys[i - 1];
+
+      var val = 'string' == typeof m[i]
+        ? decodeURIComponent(m[i])
+        : m[i];
+
+      if (key) {
+        params[key.name] = undefined !== params[key.name]
+          ? params[key.name]
+          : val;
+      } else {
+        params.push(val);
+      }
+    }
+
+    return true;
+  };
+
+  /**
+   * Normalize the given path string,
+   * returning a regular expression.
+   *
+   * An empty array should be passed,
+   * which will contain the placeholder
+   * key names. For example "/user/:id" will
+   * then contain ["id"].
+   *
+   * @param  {String|RegExp|Array} path
+   * @param  {Array} keys
+   * @param  {Boolean} sensitive
+   * @param  {Boolean} strict
+   * @return {RegExp}
+   * @api private
+   */
+
+  function pathtoRegexp(path, keys, sensitive, strict) {
+    if (path instanceof RegExp) return path;
+    if (path instanceof Array) path = '(' + path.join('|') + ')';
+    path = path
+      .concat(strict ? '' : '/?')
+      .replace(/\/\(/g, '(?:/')
+      .replace(/\+/g, '__plus__')
+      .replace(/(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, function(_, slash, format, key, capture, optional){
+        keys.push({ name: key, optional: !! optional });
+        slash = slash || '';
+        return ''
+          + (optional ? '' : slash)
+          + '(?:'
+          + (optional ? slash : '')
+          + (format || '') + (capture || (format &amp;&amp; '([^/.]+?)' || '([^/]+?)')) + ')'
+          + (optional || '');
+      })
+      .replace(/([\/.])/g, '\\$1')
+      .replace(/__plus__/g, '(.+)')
+      .replace(/\*/g, '(.*)');
+    return new RegExp('^' + path + '$', sensitive ? '' : 'i');
+  };
+
+  /**
+   * Handle "populate" events.
+   */
+
+  function onpopstate(e) {
+    if (e.state) {
+      var path = e.state.path;
+      page.replace(path, e.state);
+    }
+  }
+
+  /**
+   * Handle "click" events.
+   */
+
+  function onclick(e) {
+    if (1 != which(e)) return;
+    if (e.defaultPrevented) return;
+    var el = e.target;
+    while (el &amp;&amp; 'A' != el.nodeName) el = el.parentNode;
+    if (!el || 'A' != el.nodeName) return;
+    var href = el.href;
+    var path = el.pathname + el.search;
+    if (el.hash || '#' == el.getAttribute('href')) return;
+    if (!sameOrigin(href)) return;
+    var orig = path;
+    path = path.replace(base, '');
+    if (base &amp;&amp; orig == path) return;
+    e.preventDefault();
+    page.show(orig);
+  }
+
+  /**
+   * Event button.
+   */
+
+  function which(e) {
+    e = e || window.event;
+    return null == e.which
+      ? e.button
+      : e.which;
+  }
+
+  /**
+   * Check if `href` is the same origin.
+   */
+
+  function sameOrigin(href) {
+    var origin = location.protocol + '//' + location.hostname;
+    if (location.port) origin += ':' + location.port;
+    return 0 == href.indexOf(origin);
+  }
+
+  /**
+   * Expose `page`.
+   */
+
+  if ('undefined' == typeof module) {
+    window.page = page;
+  } else {
+    module.exports = page;
+  }
+
+})();
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Caldav.Xhr.html">Xhr</a></li></ul><h3>Global</h3><ul><li><a href="global.html#_localizeElement">_localizeElement</a></li><li><a href="global.html#_localizeElements">_localizeElements</a></li><li><a href="global.html#a">a</a></li><li><a href="global.html#above">above</a></li><li><a href="global.html#absoluteOffsetTop">absoluteOffsetTop</a></li><li><a href="global.html#addChainableMethod">addChainableMethod</a></li><li><a href="global.html#addMethod">addMethod</a></li><li><a href="global.html#addProperty">addProperty</a></li><li><a href="global.html#arguments">arguments</a></li><li><a href="global.html#assert">assert</a></li><li><a href="global.html#below">below</a></li><li><a href="global.html#buildElement">buildElement</a></li><li><a href="global.html#chromeInteractive">chromeInteractive</a></li><li><a href="global.html#closest">closest</a></li><li><a href="global.html#closeTo">closeTo</a></li><li><a href="global.html#dateFromId">dateFromId</a></li><li><a href="global.html#dateFromTransport">dateFromTransport</a></li><li><a href="global.html#dateToTransport">dateToTransport</a></li><li><a href="global.html#dayOfWeek">dayOfWeek</a></li><li><a href="global.html#dayOfWeekFromMonday">dayOfWeekFromMonday</a></li><li><a href="global.html#dayOfWeekFromStartDay">dayOfWeekFromStartDay</a></li><li><a href="global.html#daysBetween">daysBetween</a></li><li><a href="global.html#deep">deep</a></li><li><a href="global.html#deepEqual">deepEqual</a></li><li><a href="global.html#deepProperty">deepProperty</a></li><li><a href="global.html#deepPropertyNotVal">deepPropertyNotVal</a></li><li><a href="global.html#deepPropertyVal">deepPropertyVal</a></li><li><a href="global.html#doesNotThrow">doesNotThrow</a></li><li><a href="global.html#domLoaded">domLoaded</a></li><li><a href="global.html#empty">empty</a></li><li><a href="global.html#eql">eql</a></li><li><a href="global.html#equal">equal</a></li><li><a href="global.html#exist">exist</a></li><li><a href="global.html#fail">fail</a></li><li><a href="global.html#false">false</a></li><li><a href="global.html#fetchRecord">fetchRecord</a></li><li><a href="global.html#flag">flag</a></li><li><a href="global.html#get">get</a></li><li><a href="global.html#getAllFlags">getAllFlags</a></li><li><a href="global.html#getAllSubcomponents">getAllSubcomponents</a></li><li><a href="global.html#getDayId">getDayId</a></li><li><a href="global.html#getEnumerableProperties">getEnumerableProperties</a></li><li><a href="global.html#getFirstSubcomponent">getFirstSubcomponent</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getMonthId">getMonthId</a></li><li><a href="global.html#getPathValue">getPathValue</a></li><li><a href="global.html#getPort">getPort</a></li><li><a href="global.html#getProperties">getProperties</a></li><li><a href="global.html#getScheme">getScheme</a></li><li><a href="global.html#getUTC">getUTC</a></li><li><a href="global.html#getWeeksDays">getWeeksDays</a></li><li><a href="global.html#getWeekStartDate">getWeekStartDate</a></li><li><a href="global.html#hourDiff">hourDiff</a></li><li><a href="global.html#include">include</a></li><li><a href="global.html#includeMembers">includeMembers</a></li><li><a href="global.html#init">init</a></li><li><a href="global.html#instanceof">instanceof</a></li><li><a href="global.html#instanceOf">instanceOf</a></li><li><a href="global.html#isAllDay">isAllDay</a></li><li><a href="global.html#isArray">isArray</a></li><li><a href="global.html#isBoolean">isBoolean</a></li><li><a href="global.html#isDefined">isDefined</a></li><li><a href="global.html#isFalse">isFalse</a></li><li><a href="global.html#isFunction">isFunction</a></li><li><a href="global.html#isFuture">isFuture</a></li><li><a href="global.html#isNotArray">isNotArray</a></li><li><a href="global.html#isNotBoolean">isNotBoolean</a></li><li><a href="global.html#isNotFunction">isNotFunction</a></li><li><a href="global.html#isNotNull">isNotNull</a></li><li><a href="global.html#isNotNumber">isNotNumber</a></li><li><a href="global.html#isNotObject">isNotObject</a></li><li><a href="global.html#isNotString">isNotString</a></li><li><a href="global.html#isNull">isNull</a></li><li><a href="global.html#isNumber">isNumber</a></li><li><a href="global.html#isObject">isObject</a></li><li><a href="global.html#isOnlyDate">isOnlyDate</a></li><li><a href="global.html#isPast">isPast</a></li><li><a href="global.html#isSameDate">isSameDate</a></li><li><a href="global.html#isString">isString</a></li><li><a href="global.html#isToday">isToday</a></li><li><a href="global.html#isTrue">isTrue</a></li><li><a href="global.html#isUndefined">isUndefined</a></li><li><a href="global.html#itself">itself</a></li><li><a href="global.html#keys">keys</a></li><li><a href="global.html#languagechains">language chains</a></li><li><a href="global.html#least">least</a></li><li><a href="global.html#length">length</a></li><li><a href="global.html#lengthOf">lengthOf</a></li><li><a href="global.html#match">match</a></li><li><a href="global.html#members">members</a></li><li><a href="global.html#monthReady">monthReady</a></li><li><a href="global.html#monthsDayReady">monthsDayReady</a></li><li><a href="global.html#most">most</a></li><li><a href="global.html#not">not</a></li><li><a href="global.html#notDeepEqual">notDeepEqual</a></li><li><a href="global.html#notDeepProperty">notDeepProperty</a></li><li><a href="global.html#notEqual">notEqual</a></li><li><a href="global.html#notInclude">notInclude</a></li><li><a href="global.html#notInstanceOf">notInstanceOf</a></li><li><a href="global.html#notMatch">notMatch</a></li><li><a href="global.html#notOk">notOk</a></li><li><a href="global.html#notProperty">notProperty</a></li><li><a href="global.html#notStrictEqual">notStrictEqual</a></li><li><a href="global.html#notTypeOf">notTypeOf</a></li><li><a href="global.html#null">null</a></li><li><a href="global.html#objDisplay">objDisplay</a></li><li><a href="global.html#observeCalendars">observeCalendars</a></li><li><a href="global.html#ok">ok</a></li><li><a href="global.html#operator">operator</a></li><li><a href="global.html#overwriteChainableMethod">overwriteChainableMethod</a></li><li><a href="global.html#overwriteMethod">overwriteMethod</a></li><li><a href="global.html#overwriteProperty">overwriteProperty</a></li><li><a href="global.html#ownProperty">ownProperty</a></li><li><a href="global.html#pendingReady">pendingReady</a></li><li><a href="global.html#property">property</a></li><li><a href="global.html#propertyNotVal">propertyNotVal</a></li><li><a href="global.html#propertyVal">propertyVal</a></li><li><a href="global.html#relativeDuration">relativeDuration</a></li><li><a href="global.html#relativeOffset">relativeOffset</a></li><li><a href="global.html#relativeState">relativeState</a></li><li><a href="global.html#requirejs">requirejs</a></li><li><a href="global.html#respondTo">respondTo</a></li><li><a href="global.html#sameMembers">sameMembers</a></li><li><a href="global.html#satisfy">satisfy</a></li><li><a href="global.html#spanOfDay">spanOfDay</a></li><li><a href="global.html#spanOfMonth">spanOfMonth</a></li><li><a href="global.html#strictEqual">strictEqual</a></li><li><a href="global.html#string">string</a></li><li><a href="global.html#throw">throw</a></li><li><a href="global.html#throws">throws</a></li><li><a href="global.html#true">true</a></li><li><a href="global.html#type">type</a></li><li><a href="global.html#typeOf">typeOf</a></li><li><a href="global.html#undefined">undefined</a></li><li><a href="global.html#within">within</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0</a> on Thu May 14 2015 15:37:48 GMT+0800 (CST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
