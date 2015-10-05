@@ -6,10 +6,7 @@
 define(function(require) {
   'use strict';
 
-  var APIVersionDetector = require('modules/bluetooth/version_detector');
   var SettingsService = require('modules/settings_service');
-
-  var APIVersion = APIVersionDetector.getVersion();
 
   var _debug = false;
   var debug = function() {};
@@ -36,17 +33,6 @@ define(function(require) {
 
   BluetoothItem.prototype = {
     /**
-     * Return Bluetooth API version via APIVersionDetector module.
-     *
-     * @access private
-     * @memberOf BluetoothItem.prototype
-     * @type {Number}
-     */
-    _APIVersion: function bt__APIVersion() {
-      return APIVersion;
-    },
-
-    /**
      * An instance to maintain that we have created a promise to get Bluetooth
      * module.
      *
@@ -66,15 +52,8 @@ define(function(require) {
     _getBluetooth: function bt__getBluetooth() {
       if (!this._getBluetoothPromise) {
         this._getBluetoothPromise = new Promise(function(resolve) {
-          var bluetoothModulePath;
-          if (this._APIVersion() === 1) {
-            bluetoothModulePath = 'modules/bluetooth/bluetooth_v1';
-          } else if (this._APIVersion() === 2) {
-            debug('loading.. modules/bluetooth/bluetooth_context');
-            bluetoothModulePath = 'modules/bluetooth/bluetooth_context';
-          }
-
-          require([bluetoothModulePath], resolve);
+          debug('loading.. modules/bluetooth/bluetooth_context');
+          require(['modules/bluetooth/bluetooth_context'], resolve);
         }.bind(this));
       }
       return this._getBluetoothPromise;
@@ -152,14 +131,9 @@ define(function(require) {
      */
     _navigatePanelWithVersionCheck:
     function bt__navigatePanelWithVersionCheck() {
-      if (this._APIVersion() === 1) {
-        // navigate old bluetooth panel..
-        SettingsService.navigate('bluetooth');
-      } else if (this._APIVersion() === 2) {
-        // navigate new bluetooth panel..
-        debug('navigate bluetooth_v2 panel');
-        SettingsService.navigate('bluetooth_v2');
-      }
+      // navigate new bluetooth panel..
+      debug('navigate bluetooth panel');
+      SettingsService.navigate('bluetooth');
     }
   };
 

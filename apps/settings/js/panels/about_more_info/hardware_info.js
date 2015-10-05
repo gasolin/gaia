@@ -68,21 +68,8 @@ define(function(require) {
      * @memberOf HardwareInfo.prototype
      */
     _loadBluetoothAddress: function about_loadBluetoothAddress() {
-      return new Promise(function(resolve, reject) {
-        require(['modules/bluetooth/version_detector'],
-          function(detector) {
-            var bluetoothModulePath;
-            if (detector.getVersion() === 1) {
-              bluetoothModulePath = 'modules/bluetooth/bluetooth_v1';
-            } else if (detector.getVersion() === 2) {
-              bluetoothModulePath = 'modules/bluetooth/bluetooth_context';
-            }
-            if (bluetoothModulePath) {
-              require([bluetoothModulePath], resolve);
-            } else {
-              reject();
-            }
-        });
+      return new Promise(function(resolve) {
+        require(['modules/bluetooth/bluetooth_context'], resolve);
       }).then(function(Bluetooth) {
         if (Bluetooth) {
           Bluetooth.observe('address',

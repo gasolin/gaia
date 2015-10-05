@@ -8,29 +8,14 @@ suite('BluetoothItem', function() {
   ];
   var map = {
     '*': {
-      'modules/bluetooth/version_detector': 'MockVersionDetector',
       'modules/settings_service': 'MockSettingsService',
-      'modules/bluetooth/bluetooth_v1': 'MockBluetooth_v1',
       'modules/bluetooth/bluetooth_context': 'MockBluetooth_v2'
     }
   };
 
   suiteSetup(function(done) {
-    this.MockVersionDetector = {
-      _mVersion: 1,
-      getVersion: function() {return this._mVersion;}
-    };
-
     this.MockSettingsService = {
       navigate: function() {}
-    };
-
-    this.MockBluetooth_v1 = {
-      enabled: false,
-      numberOfPairedDevices: 0,
-      firstPairedDeviceName: null,
-      observe: function() {},
-      unobserve: function() {}
     };
 
     this.MockBluetooth_v2 = {
@@ -42,16 +27,8 @@ suite('BluetoothItem', function() {
     };
 
     var requireCtx = testRequire([], map, function() {});
-    define('MockVersionDetector', function() {
-      return this.MockVersionDetector;
-    }.bind(this));
-
     define('MockSettingsService', function() {
       return this.MockSettingsService;
-    }.bind(this));
-
-    define('MockBluetooth_v1', function() {
-      return this.MockBluetooth_v1;
     }.bind(this));
 
     define('MockBluetooth_v2', function() {

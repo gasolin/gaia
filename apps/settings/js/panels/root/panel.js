@@ -8,7 +8,6 @@ define(function(require) {
   var ThemesItem = require('panels/root/themes_item');
   var AddonsItem = require('panels/root/addons_item');
   var STKItem = require('panels/root/stk_item');
-  var BTAPIVersionDetector = require('modules/bluetooth/version_detector');
   var DsdsSettings = require('dsds_settings');
 
   var queryRootForLowPriorityItems = function(panel) {
@@ -79,20 +78,6 @@ define(function(require) {
         stkItem = STKItem({
           iccMainHeader: panel.querySelector('#icc-mainheader'),
           iccEntries: panel.querySelector('#icc-entries')
-        });
-
-        // The decision of navigation panel will be removed while we are no
-        // longer to use Bluetooth API v1.
-        var bluetoothListItem = panel.querySelector('.menuItem-bluetooth');
-        var BTAPIVersion = BTAPIVersionDetector.getVersion();
-        bluetoothListItem.addEventListener('click', function() {
-          if (BTAPIVersion === 1) {
-            // navigate old bluetooth panel..
-            SettingsService.navigate('bluetooth');
-          } else if (BTAPIVersion === 2) {
-            // navigate new bluetooth panel..
-            SettingsService.navigate('bluetooth_v2');
-          }
         });
 
         activityDoneButton = panel.querySelector('#activityDoneButton');
