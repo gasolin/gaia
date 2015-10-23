@@ -322,6 +322,7 @@ define(function(require) {
         // and a user is able to trigger onclick event. Make sure screen
         // is unlocked, then show the prompt in bluetooth app.
         if (!req.result['lockscreen.locked']) {
+          debug('handle the notification');
           // Clean the pairing request notficiation which is expired.
           notification.close();
 
@@ -351,8 +352,8 @@ define(function(require) {
     // we will show pair view immediately. Then, we clear up the notification.
     // If pendingPairing object is not exist, it means pair request is expired.
     showPendingPairing: function(screenLocked) {
-      debug('showPendingPairing when screenLocked:' + screenLocked);
       if (!screenLocked) {
+        debug('showPendingPairing when screen unLocked');
         if (this.pendingPairing) {
           debug('has pendingPairing');
           this._isExpired = false;
@@ -384,6 +385,7 @@ define(function(require) {
 
     // Clean all notifications which are fired with tag 'pairing-request'.
     cleanNotifications: function() {
+      debug('cleanNotifications');
       Notification.get().then(function(notifications) {
         if (notifications) {
           notifications.forEach(function(notification) {
