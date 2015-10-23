@@ -359,7 +359,7 @@ suite('Bluetooth app > PairManager ', function() {
     setup(function() {
       var _ = window.navigator.mozL10n.get;
       this.sinon.stub(PairManager, 'showPairview');
-      this.sinon.stub(PairManager, 'pairingRequestExpiredNotificationHandler');
+      this.sinon.stub(PairManager, '_pairingRequestExpiredNotificationHandler');
       mockNotification = {};
       notificationStub =
         this.sinon.stub(window, 'Notification').returns(mockNotification);
@@ -391,7 +391,7 @@ suite('Bluetooth app > PairManager ', function() {
       assert.isDefined(mockNotification.onclick);
       mockNotification.onclick();
       assert.isTrue(
-        PairManager.pairingRequestExpiredNotificationHandler.called);
+        PairManager._pairingRequestExpiredNotificationHandler.called);
     });
   });
 
@@ -405,7 +405,7 @@ suite('Bluetooth app > PairManager ', function() {
         this.sinon.spy(mockNotification, 'close');
         this.sinon.stub(PairExpiredDialog, 'showConfirm');
         MockNavigatorSettings.mSettings['lockscreen.locked'] = true;
-        PairManager.pairingRequestExpiredNotificationHandler(mockNotification);
+        PairManager._pairingRequestExpiredNotificationHandler(mockNotification);
         setTimeout(done);
       });
 
@@ -425,7 +425,7 @@ suite('Bluetooth app > PairManager ', function() {
         switchReadOnlyProperty(PairExpiredDialog, 'isVisible', false);
         this.sinon.stub(PairExpiredDialog, 'showConfirm');
         MockNavigatorSettings.mSettings['lockscreen.locked'] = false;
-        PairManager.pairingRequestExpiredNotificationHandler(mockNotification);
+        PairManager._pairingRequestExpiredNotificationHandler(mockNotification);
         setTimeout(done);
       });
 

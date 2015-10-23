@@ -61,10 +61,9 @@ define(function(require) {
 
       // Observe screen lockscreen locked/unlocked state for show pending
       // pairing request immediately.
-      navigator.mozSettings.addObserver('lockscreen.locked',
-        function gotScreenLockedChanged(event) {
-          this.showPendingPairing(event.settingValue);
-      }.bind(this));
+      navigator.mozSettings.addObserver('lockscreen.locked', (event) => {
+        this.showPendingPairing(event.settingValue);
+      });
 
       // Observe Bluetooth 'enabled' property from hardware side.
       // Then, close pairing dialog immediately.
@@ -245,7 +244,7 @@ define(function(require) {
      * @memberOf PairManager
      */
     _onRequestPairingFromSystemMessage: function() {
-      debug('onRequestPairingFromSystemMessage():');
+      debug('launch bluetooth app');
     },
 
     /**
@@ -258,7 +257,7 @@ define(function(require) {
      * @param {Object} pairingInfo.evt - DOM evt of this pairing request
      */
     _handlePairingRequest: function(pairingInfo) {
-      debug('_onRequestPairing():' +
+      debug('_handlePairingRequest():' +
             ' pairingInfo.method = ' + pairingInfo.method +
             ' pairingInfo.evt = ' + pairingInfo.evt);
 
@@ -308,16 +307,17 @@ define(function(require) {
 
       // set onclick handler for the notification
       notification.onclick =
-        this.pairingRequestExpiredNotificationHandler.bind(this, notification);
+        this._pairingRequestExpiredNotificationHandler.bind(this, notification);
     },
 
     // According to user story, it won't notify user again
     // while the pending pairing request is just timeout or canceled.
     // So we have to set onclick handler in this moment.
     // The handler will pop out a pairing request expired prompt only.
-    pairingRequestExpiredNotificationHandler: function(notification) {
+    _pairingRequestExpiredNotificationHandler: function(notification) {
       var req = navigator.mozSettings.createLock().get('lockscreen.locked');
       req.onsuccess = () => {
+        debug('_pairingRequestExpiredNotificationHandler');
         // Avoid to do nothting while the notification toast is showing
         // and a user is able to trigger onclick event. Make sure screen
         // is unlocked, then show the prompt in bluetooth app.
@@ -330,6 +330,7 @@ define(function(require) {
 
             // launch bluetooth app to foreground for showing the prompt
             if (PairExpiredDialog.isVisible) {
+              debug('launch app');
               app.launch();
             }
 
@@ -353,6 +354,7 @@ define(function(require) {
       debug('showPendingPairing when screenLocked:' + screenLocked);
       if (!screenLocked) {
         if (this.pendingPairing) {
+          debug('has pendingPairing');
           this._isExpired = false;
           // show pair view from the callback function
           if (this.pendingPairing.showPairviewCallback) {
@@ -361,6 +363,7 @@ define(function(require) {
 
           this.cleanPendingPairing();
         } else {
+          debug('pendingPairing is expired');
           this._isExpired = true;
         }
       }
