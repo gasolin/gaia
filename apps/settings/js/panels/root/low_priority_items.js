@@ -18,7 +18,8 @@ define(function(require) {
     StorageAppItem: require('panels/root/storage_app_item'),
     WifiItem: require('panels/root/wifi_item'),
     ScreenLockItem: require('panels/root/screen_lock_item'),
-    SimSecurityItem: require('panels/root/sim_security_item')
+    SimSecurityItem: require('panels/root/sim_security_item'),
+    AirplaneModeItem: require('panels/root/airplane_mode_item')
   };
 
   return {
@@ -31,6 +32,7 @@ define(function(require) {
     get StorageAppItem()   { return items.StorageAppItem; },
     get WifiItem()         { return items.WifiItem; },
     get ScreenLockItem()   { return items.ScreenLockItem; },
-    get SimSecurityItem()  { return items.SimSecurityItem; }
+    get SimSecurityItem()  { return items.SimSecurityItem; },
+    get AirplaneModeItem() { return items.AirplaneModeItem; }
   };
 });

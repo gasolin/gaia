@@ -5,7 +5,7 @@ define(function(require) {
   var SettingsPanel = require('modules/settings_panel');
   var Root = require('panels/root/root');
 
-  var AirplaneModeItem = require('panels/root/airplane_mode_item');
+  // var AirplaneModeItem = require('panels/root/airplane_mode_item');
   var ThemesItem = require('panels/root/themes_item');
   var AddonsItem = require('panels/root/addons_item');
   var STKItem = require('panels/root/stk_item');
@@ -32,13 +32,14 @@ define(function(require) {
       'StorageAppItem': panel.querySelector('.application-storage-desc'),
       'WifiItem': panel.querySelector('#wifi-desc'),
       'ScreenLockItem': panel.querySelector('.screenLock-desc'),
-      'SimSecurityItem': panel.querySelector('.simCardLock-desc')
+      'SimSecurityItem': panel.querySelector('.simCardLock-desc'),
+      'AirplaneModeItem': panel.querySelector('.airplaneMode-input')
     };
   };
 
   return function ctor_root_panel() {
     var root;
-    var airplaneModeItem;
+    // var airplaneModeItem;
     var themesItem;
     var addonsItem;
     var stkItem;
@@ -70,8 +71,8 @@ define(function(require) {
         root = Root();
         root.init(panel);
 
-        airplaneModeItem =
-          AirplaneModeItem(panel.querySelector('.airplaneMode-input'));
+        // airplaneModeItem =
+        //   AirplaneModeItem(panel.querySelector('.airplaneMode-input'));
         themesItem =
           ThemesItem(panel.querySelector('.themes-section'));
         addonsItem =
@@ -121,7 +122,7 @@ define(function(require) {
         navigator.addIdleObserver(idleObserver);
       },
       onShow: function rp_onShow(panel) {
-        airplaneModeItem.enabled = true;
+        // airplaneModeItem.enabled = true;
         themesItem.enabled = true;
         addonsItem.enabled = true;
 
@@ -132,7 +133,7 @@ define(function(require) {
         }
       },
       onHide: function rp_onHide() {
-        airplaneModeItem.enabled = false;
+        // airplaneModeItem.enabled = false;
         themesItem.enabled = false;
         addonsItem.enabled = false;
 

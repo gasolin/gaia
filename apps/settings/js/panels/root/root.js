@@ -30,6 +30,7 @@ define(function(require) {
         'js/firefox_accounts/menu_loader.js',
         'js/dsds_settings.js',
         'js/telephony_settings.js',
+        'shared/js/airplane_mode_helper.js',
         'js/telephony_items_handler.js'
       ], function() {
         TelephonySettingHelper
