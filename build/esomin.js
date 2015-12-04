@@ -10,7 +10,7 @@
 
 var esprima = require('./esomin/esprima');
 var escodegen = require('./esomin/escodegen');
-var utils = require('utils');
+var utils = require('./utils');
 var jsSuffix = /\.js$/;
 
 /**
@@ -76,4 +76,3 @@ exports.astMinify = function(contents, options) {
   // https://github.com/Constellation/escodegen/wiki/API
   return escodegen.generate(ast, options);
 };
-

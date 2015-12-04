@@ -1,7 +1,7 @@
 'use strict';
 
 /* global dump, require, exports */
-const utils = require('utils');
+const utils = require('./utils');
 
 const BASE_ICON_SIZE = 60;
 

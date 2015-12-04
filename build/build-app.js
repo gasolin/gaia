@@ -2,17 +2,19 @@
 
 /* global require, exports */
 
-var utils = require('utils');
+var utils = require('./utils');
+console.log('node? '+utils.isNode());
+var nodeHelper = new utils.NodeHelper();
 
 exports.execute = function(options) {
   var webapp = utils.getWebapp(options.APP_DIR, options);
   var appDir = utils.getFile(webapp.appDirPath);
-  require(appDir.leafName + '/build').execute(options, webapp);
+  nodeHelper.require('../apps/'+appDir.leafName + '/build', options, webapp);
 
   // Wait for all app tasks to be done before proceeding.
   utils.processEvents(function () {
     return { wait: false };
   });
 
-  require('post-app').execute(options, webapp);
+  nodeHelper.require('post-app', options, webapp);
 };

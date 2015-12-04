@@ -2,7 +2,7 @@
 
 /* global exports, require, Services, dump, Components */
 
-const utils = require('utils');
+const utils = require('./utils');
 const { Cu } = require('chrome');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/reflect.jsm');

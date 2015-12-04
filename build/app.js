@@ -2,8 +2,8 @@
 
 /* global require, exports, quit */
 
-var utils = require('utils');
-var rebuild = require('rebuild');
+var utils = require('./utils');
+var rebuild = require('./rebuild');
 var nodeHelper = new utils.NodeHelper();
 
 function getAppRegExp(options) {
@@ -70,7 +70,14 @@ function buildApps(options) {
           });
         }
       } else {
-        require('./build-app').execute(appOptions);
+        // XXX 1. remove hosted_apps/ to detour webapps-manifest issue
+        // 2. run command: make install-gaia APP=settings RUN_ON_NODE=1 P=0
+        if (appDir.indexOf('settings') !== -1) {
+          utils.log('>>>>>>>>>>>>');
+          nodeHelper.require('./build-app', appOptions);
+        } else {
+          require('./build-app').execute(appOptions);
+        }
       }
     }
     // Do not spawn a new process since too many processes will slow it down

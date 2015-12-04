@@ -2,9 +2,9 @@
 
 /* global require, exports */
 
-var utils = require('utils');
+var utils = require('./utils');
 var fsPath = require('sdk/fs/path');
-var config = require('config/build-config.json');
+var config = require('./config/build-config.json');
 
 function getTimestamp(dirPaths) {
   let timestamp = {};

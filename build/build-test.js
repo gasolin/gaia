@@ -6,7 +6,7 @@
  * This script is used to run test case for gaia build system.
  */
 
-var utils = require('utils');
+var utils = require('./utils');
 
 exports.execute = function(options) {
   var TEST_TYPE = utils.getEnv('TEST_TYPE');

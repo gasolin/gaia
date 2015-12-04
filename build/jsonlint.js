@@ -2,7 +2,7 @@
 
 /* global exports, require, dump */
 
-var utils = require('utils');
+var utils = require('./utils');
 var RE_JSON = /\.json$/;
 
 exports.execute = function(options) {

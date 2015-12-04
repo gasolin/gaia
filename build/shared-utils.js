@@ -2,7 +2,7 @@
 
 /* global exports, require */
 
-var utils = require('utils');
+var utils = require('./utils');
 
 // Taken from r.js css optimizing step.
 var cssImportRegExp = /\@import\s+(url\()?\s*([^);]+)\s*(\))?([\w, ]*)(;)?/ig;

@@ -1,6 +1,6 @@
 'use strict';
 
-var utils = require('utils');
+var utils = require('./utils');
 var nodeHelper = new utils.NodeHelper();
 
 exports.execute = function(options, webapp) {
@@ -10,7 +10,7 @@ exports.execute = function(options, webapp) {
 
   nodeHelper.require('post-manifest', options);
 
-  nodeHelper.require('multilocale', options);
+  require('multilocale', options);
 
   nodeHelper.require('copy-build-stage-data', options);
 

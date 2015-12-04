@@ -8,30 +8,6 @@ var preprocessor = require('preprocessor');
 
 var jsSuffix = /\.js$/;
 
-function hasGitCommand() {
-  return utils.getEnvPath().some(function(path) {
-    try {
-      var cmd = utils.getFile(path, 'git');
-      return cmd.exists();
-    } catch (e) {
-      // path nout found
-    }
-    return false;
-  });
-}
-
-
-// FIXME: execute any command without shell does not work on build machine for
-// flame, so we need this workaround to fix this issue. please remove it if
-// bug 1044981 is fixed.
-function executeGitByShell(gitDirPath, commitFilePath) {
-  var sh = new utils.Commander('sh');
-  sh.initPath(utils.getEnvPath());
-
-  sh.run(['-c', 'git --git-dir=' + gitDirPath + ' log -1 ' +
-    '--format="%H%n%ct" HEAD > ' + commitFilePath]);
-}
-
 var SettingsAppBuilder = function() {
 };
 
@@ -125,56 +101,6 @@ SettingsAppBuilder.prototype.executeJsmin = function(options) {
   }
 };
 
-SettingsAppBuilder.prototype.writeGitCommit = function(options) {
-  var gitDir = utils.getFile(options.GAIA_DIR, '.git');
-  var overrideCommitFile = utils.getFile(options.GAIA_DIR,
-    'gaia_commit_override.txt');
-  var commitFile = utils.getFile(options.STAGE_APP_DIR, 'resources');
-  utils.ensureFolderExists(commitFile);
-
-  commitFile.append('gaia_commit.txt');
-  if (overrideCommitFile.exists()) {
-    utils.copyFileTo(overrideCommitFile, commitFile.parent.path,
-      commitFile.leafName);
-  } else if(gitDir.exists() && hasGitCommand()) {
-    var git = new utils.Commander('git');
-    var stderr, stdout;
-    var args = [
-      '--git-dir=' + gitDir.path,
-      'log', '-1',
-      '--format=%H%n%ct',
-      'HEAD'];
-    var cmdOptions = {
-      stdout: function(data) {
-        stdout = data;
-      },
-      stderr: function(data) {
-        stderr = data;
-      },
-      done: function(data) {
-        if (data.exitCode !== 0) {
-          var errStr = 'Error writing git commit file!\n' + 'stderr: \n' +
-            stderr + '\nstdout: ' + stdout;
-          utils.log('settings-app-build', errStr);
-          utils.log('settings-app-build', 'fallback to execute git by shell');
-          // FIXME: see comment on executeGitByShell()
-          executeGitByShell(gitDir.path, commitFile.path);
-        } else {
-          utils.log('settings-app-build', 'Writing git commit information ' +
-            'to: ' + commitFile.path);
-          utils.writeContent(commitFile, stdout);
-        }
-      }
-    };
-    git.initPath(utils.getEnvPath());
-    git.runWithSubprocess(args, cmdOptions);
-  } else {
-    utils.writeContent(commitFile,
-      'Unknown Git commit; build date shown here.\n' +
-      parseInt(Date.now()/1000) + '\n');
-  }
-};
-
 SettingsAppBuilder.prototype.enableDataSync = function(options) {
   var fileList = {
     process:[
@@ -196,7 +122,7 @@ SettingsAppBuilder.prototype.enableDataSync = function(options) {
 };
 
 SettingsAppBuilder.prototype.execute = function(options) {
-  this.writeGitCommit(options);
+  // this.writeGitCommit(options);
   this.writeDeviceFeaturesJSON(options);
   this.writeSupportsJSON(options);
   this.writeFindMyDeviceConfigJSON(options);
