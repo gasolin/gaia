@@ -1,4 +1,3 @@
-/* global openLink */
 /**
  * PanelUtils is a singleton that defines panel related utility functions.
  *
@@ -48,6 +47,25 @@ define(function(require) {
         }
         Settings.currentPanel = origin; // hide dialog box
       };
+    }
+  }
+
+  /* Open a link with a web activity */
+  function openLink(url) {
+    if (url.startsWith('tel:')) { // dial a phone number
+      var telActivity = new window.MozActivity({
+        name: 'dial',
+        data: { type: 'webtelephony/number', number: url.substr(4) }
+      });
+      // For workaround jshint.
+      telActivity.onsuccess = function() {};
+    } else if (!url.startsWith('#')) { // browse a URL
+      var linkActivity = new window.MozActivity({
+        name: 'view',
+        data: { type: 'url', url: url }
+      });
+      // For workaround jshint.
+      linkActivity.onsuccess = function() {};
     }
   }
 
